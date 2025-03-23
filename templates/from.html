@@ -1260,7 +1260,11 @@ function goToNext() {
     });
 }
 
-
+// Calculate totals when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    calculateTotalPoints();
+    calculateFeedbackTotal();
+});
 
 
     </script>

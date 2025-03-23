@@ -6,6 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Forms3</title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Debug information -->
+    <script>
+        // Show debug info in console
+        console.log("Form ID: {{ form_id }}");
+        console.log("Self improvement data count: {{ self_improvement_data|length if self_improvement_data else 0 }}");
+        console.log("Certification data count: {{ certification_data|length if certification_data else 0 }}");
+        console.log("Copyright data count: {{ copyright_data|length if copyright_data else 0 }}");
+        console.log("Resource data count: {{ resource_data|length if resource_data else 0 }}");
+        console.log("Committee data count: {{ committee_data|length if committee_data else 0 }}");
+        console.log("Project data count: {{ project_data|length if project_data else 0 }}");
+        console.log("Contribution data count: {{ contribution_data|length if contribution_data else 0 }}");
+        console.log("Self assessment marks: {{ self_assessment_marks }}");
+    </script>
     <style>
         body {
             background: url('/static/bg.jpg') no-repeat center center fixed;
@@ -178,47 +191,61 @@
     <!-- Checkboxes for options -->
     <div class="checkboxes">
         <label>
-            <input type="checkbox" id="selfImprovementCheckbox" onchange="toggleSelfImprovementTable()"> Self-Improvement Initiatives
+            <input type="checkbox" id="selfImprovementInitiatives" onchange="toggleUploadDownload('selfImprovementInitiatives')"> Self-Improvement Initiatives
         </label>
         <label>
-            <input type="checkbox" id="representingCollegeCheckbox" onchange="toggleRepresentingCollegeTable()"> Representing College in External Environment
+            <input type="checkbox" id="representingCollege" onchange="toggleUploadDownload('representingCollege')"> Representing College in External Environment
         </label>
     </div>
 
     <!-- Container for Self-Improvement Initiatives -->
     <div id="selfImprovementTableContainer" style="display: none;">
-        <!-- Table for Self-Improvement Initiatives -->
-        <h4>Self-Improvement Initiatives</h4>
+        <h4>Self-improvement initiatives/ certifications/Patents/Copyrights</h4>
         <table class="table table-bordered" id="selfImprovementTable">
             <thead>
                 <tr>
                     <th>Sr No.</th>
-                    <th>Title of paper published in International conference</th>
-                    <th>Month/year</th>
+                    <th>Title of paper</th>
+                    <th>Month/Year</th>
                     <th>Name of conference</th>
                     <th>ISBN/ISSN Number</th>
-                    <th>Name Co-authors</th>
+                    <th>Name of Co-authors</th>
                     <th>Online link</th>
                     <th>Action</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>1</td>
-                    <td><input type="text" class="form-control" title="Enter Title of paper"></td>
-                    <td><input type="text" class="form-control" title="Enter Month/Year"></td>
-                    <td><input type="text" class="form-control" title="Enter Name of conference"></td>
-                    <td><input type="text" class="form-control" title="Enter ISBN/ISSN Number"></td>
-                    <td><input type="text" class="form-control" title="Enter Name of Co-authors"></td>
-                    <td><input type="url" class="form-control" title="Enter Online link"></td>
-                    <td><button class="btn btn-danger" onclick="removeRow(this, 'selfImprovementTable')">-</button></td>
-                </tr>
+                {% if self_improvement_data and self_improvement_data|length > 0 %}
+                    {% for item in self_improvement_data %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><input type="text" class="form-control" title="Enter Title of paper" value="{{ item.1 }}"></td>
+                        <td><input type="text" class="form-control" title="Enter Month/Year" value="{{ item.2 }}"></td>
+                        <td><input type="text" class="form-control" title="Enter Name of conference" value="{{ item.3 }}"></td>
+                        <td><input type="text" class="form-control" title="Enter ISBN/ISSN Number" value="{{ item.4 }}"></td>
+                        <td><input type="text" class="form-control" title="Enter Name of Co-authors" value="{{ item.5 }}"></td>
+                        <td><input type="text" class="form-control" title="Enter Online link" value="{{ item.6 }}"></td>
+                        <td><button class="btn btn-danger" onclick="removeRow(this, 'selfImprovementTable')">-</button></td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td>1</td>
+                        <td><input type="text" class="form-control" title="Enter Title of paper"></td>
+                        <td><input type="text" class="form-control" title="Enter Month/Year"></td>
+                        <td><input type="text" class="form-control" title="Enter Name of conference"></td>
+                        <td><input type="text" class="form-control" title="Enter ISBN/ISSN Number"></td>
+                        <td><input type="text" class="form-control" title="Enter Name of Co-authors"></td>
+                        <td><input type="text" class="form-control" title="Enter Online link"></td>
+                        <td><button class="btn btn-danger" onclick="removeRow(this, 'selfImprovementTable')">-</button></td>
+                    </tr>
+                {% endif %}
             </tbody>
         </table>
         <button class="btn btn-success" onclick="addSelfImprovementRow()">+</button>
 
-        <!-- Table for Certifications -->
-        <h4>Certifications</h4>
+        <!-- Certification table -->
+        <h4>Certification</h4>
         <table class="table table-bordered" id="certificationTable">
             <thead>
                 <tr>
@@ -229,21 +256,36 @@
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>1</td>
-                    <td><input type="text" class="form-control" title="Enter Name of the Certification"></td>
-                    <td>
-                        <input type="file" class="form-control-file" onchange="uploadDocument(this)">
-                        <div class="upload-status"></div>
-                    </td>
-                    <td><button class="btn btn-danger" onclick="removeRow(this, 'certificationTable')">-</button></td>
-                </tr>
+                {% if certification_data and certification_data|length > 0 %}
+                    {% for item in certification_data %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><input type="text" class="form-control" title="Enter Name of the Certification" value="{{ item.1 }}"></td>
+                        <td>
+                            <div class="d-flex">
+                                <input type="file" class="form-control" accept=".pdf,.doc,.docx">
+                                {% if item.2 %}
+                                <a href="/uploads/{{ item.2.split('/')[-1] }}" target="_blank" class="btn btn-info ml-2">View</a>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td><button class="btn btn-danger" onclick="removeRow(this, 'certificationTable')">-</button></td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td>1</td>
+                        <td><input type="text" class="form-control" title="Enter Name of the Certification"></td>
+                        <td><input type="file" class="form-control" accept=".pdf,.doc,.docx"></td>
+                        <td><button class="btn btn-danger" onclick="removeRow(this, 'certificationTable')">-</button></td>
+                    </tr>
+                {% endif %}
             </tbody>
         </table>
         <button class="btn btn-success" onclick="addCertificationRow()">+</button>
 
-        <!-- Table for Titles -->
-        <h4>Name of Copyrights published</h4>
+        <!-- Copyright/Patent table -->
+        <h4>Copyright/Patent</h4>
         <table class="table table-bordered" id="titleTable">
             <thead>
                 <tr>
@@ -255,13 +297,25 @@
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>1</td>
-                    <td><input type="text" class="form-control" title="Enter Name of the Title"></td>
-                    <td><input type="text" class="form-control" title="Enter Month/Year"></td>
-                    <td><input type="text" class="form-control" title="Enter Registration Number"></td>
-                    <td><button class="btn btn-danger" onclick="removeRow(this, 'titleTable')">-</button></td>
-                </tr>
+                {% if copyright_data and copyright_data|length > 0 %}
+                    {% for item in copyright_data %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><input type="text" class="form-control" title="Enter Name of the Title" value="{{ item.1 }}"></td>
+                        <td><input type="text" class="form-control" title="Enter Month/Year" value="{{ item.2 }}"></td>
+                        <td><input type="text" class="form-control" title="Enter Registration Number" value="{{ item.3 }}"></td>
+                        <td><button class="btn btn-danger" onclick="removeRow(this, 'titleTable')">-</button></td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td>1</td>
+                        <td><input type="text" class="form-control" title="Enter Name of the Title"></td>
+                        <td><input type="text" class="form-control" title="Enter Month/Year"></td>
+                        <td><input type="text" class="form-control" title="Enter Registration Number"></td>
+                        <td><button class="btn btn-danger" onclick="removeRow(this, 'titleTable')">-</button></td>
+                    </tr>
+                {% endif %}
             </tbody>
         </table>
         <button class="btn btn-success" onclick="addTitleRow()">+</button>
@@ -283,14 +337,27 @@
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>1</td>
-                    <td><input type="text" class="form-control" title="Enter Topic Name"></td>
-                    <td><input type="text" class="form-control" title="Enter Department"></td>
-                    <td><input type="text" class="form-control" title="Enter Name of the institute"></td>
-                    <td><input type="number" class="form-control" title="Enter Number of participants"></td>
-                    <td><button class="btn btn-danger" onclick="removeRow(this, 'resourcePersonTable')">-</button></td>
-                </tr>
+                {% if resource_data and resource_data|length > 0 %}
+                    {% for item in resource_data %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><input type="text" class="form-control" title="Enter Topic Name" value="{{ item.1 }}"></td>
+                        <td><input type="text" class="form-control" title="Enter Department" value="{{ item.2 }}"></td>
+                        <td><input type="text" class="form-control" title="Enter Name of the institute" value="{{ item.3 }}"></td>
+                        <td><input type="number" class="form-control" title="Enter Number of participants" value="{{ item.4 }}"></td>
+                        <td><button class="btn btn-danger" onclick="removeRow(this, 'resourcePersonTable')">-</button></td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td>1</td>
+                        <td><input type="text" class="form-control" title="Enter Topic Name"></td>
+                        <td><input type="text" class="form-control" title="Enter Department"></td>
+                        <td><input type="text" class="form-control" title="Enter Name of the institute"></td>
+                        <td><input type="number" class="form-control" title="Enter Number of participants"></td>
+                        <td><button class="btn btn-danger" onclick="removeRow(this, 'resourcePersonTable')">-</button></td>
+                    </tr>
+                {% endif %}
             </tbody>
         </table>
         <button class="btn btn-success" onclick="addResourcePersonRow()">+</button>
@@ -308,19 +375,31 @@
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>1</td>
-                    <td><input type="text" class="form-control" title="Enter Name of Committee"></td>
-                    <td><input type="text" class="form-control" title="Enter Roles and Responsibilities"></td>
-                    <td><input type="text" class="form-control" title="Enter Designation"></td>
-                    <td><button class="btn btn-danger" onclick="removeRow(this, 'universityCommitteeTable')">-</button></td>
-                </tr>
+                {% if committee_data and committee_data|length > 0 %}
+                    {% for item in committee_data %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><input type="text" class="form-control" title="Enter Name of Committee" value="{{ item.1 }}"></td>
+                        <td><input type="text" class="form-control" title="Enter Roles and Responsibilities" value="{{ item.2 }}"></td>
+                        <td><input type="text" class="form-control" title="Enter Designation" value="{{ item.3 }}"></td>
+                        <td><button class="btn btn-danger" onclick="removeRow(this, 'universityCommitteeTable')">-</button></td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td>1</td>
+                        <td><input type="text" class="form-control" title="Enter Name of Committee"></td>
+                        <td><input type="text" class="form-control" title="Enter Roles and Responsibilities"></td>
+                        <td><input type="text" class="form-control" title="Enter Designation"></td>
+                        <td><button class="btn btn-danger" onclick="removeRow(this, 'universityCommitteeTable')">-</button></td>
+                    </tr>
+                {% endif %}
             </tbody>
         </table>
         <button class="btn btn-success" onclick="addUniversityCommitteeRow()">+</button>
 
-        <!-- Table for External Projects/Competitions Participations -->
-        <h4>External Projects/Competitions Participations</h4>
+        <!-- Table for External Projects -->
+        <h4>External Projects / Task force / Exchange Programs</h4>
         <table class="table table-bordered" id="externalProjectsTable">
             <thead>
                 <tr>
@@ -335,16 +414,31 @@
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>1</td>
-                    <td><input type="text" class="form-control" title="Enter Role"></td>
-                    <td><input type="text" class="form-control" title="Enter Description"></td>
-                    <td><input type="text" class="form-control" title="Enter Contribution"></td>
-                    <td><input type="text" class="form-control" title="Enter University"></td>
-                    <td><input type="text" class="form-control" title="Enter Duration"></td>
-                    <td><input type="text" class="form-control" title="Enter Comments"></td>
-                    <td><button class="btn btn-danger" onclick="removeRow(this, 'externalProjectsTable')">-</button></td>
-                </tr>
+                {% if project_data and project_data|length > 0 %}
+                    {% for item in project_data %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><input type="text" class="form-control" title="Enter Role" value="{{ item.1 }}"></td>
+                        <td><input type="text" class="form-control" title="Enter Description" value="{{ item.2 }}"></td>
+                        <td><input type="text" class="form-control" title="Enter Contribution" value="{{ item.3 }}"></td>
+                        <td><input type="text" class="form-control" title="Enter University" value="{{ item.4 }}"></td>
+                        <td><input type="text" class="form-control" title="Enter Duration" value="{{ item.5 }}"></td>
+                        <td><input type="text" class="form-control" title="Enter Comments" value="{{ item.6 }}"></td>
+                        <td><button class="btn btn-danger" onclick="removeRow(this, 'externalProjectsTable')">-</button></td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td>1</td>
+                        <td><input type="text" class="form-control" title="Enter Role"></td>
+                        <td><input type="text" class="form-control" title="Enter Description"></td>
+                        <td><input type="text" class="form-control" title="Enter Contribution"></td>
+                        <td><input type="text" class="form-control" title="Enter University"></td>
+                        <td><input type="text" class="form-control" title="Enter Duration"></td>
+                        <td><input type="text" class="form-control" title="Enter Comments"></td>
+                        <td><button class="btn btn-danger" onclick="removeRow(this, 'externalProjectsTable')">-</button></td>
+                    </tr>
+                {% endif %}
             </tbody>
         </table>
         <button class="btn btn-success" onclick="addExternalProjectsRow()">+</button>
@@ -353,7 +447,7 @@
 <!-- Self-Assessment Marks Input -->
 <div class="self-assessment">
     <h4>Self-Assessment Marks</h4>
-    <input type="number" class="form-control" id="selfAssessmentMarks" min="0" max="10" placeholder="Enter marks (0-10)">
+    <input type="number" class="form-control" id="selfAssessmentMarks" min="0" max="10" placeholder="Enter marks (0-10)" value="{{ self_assessment_marks if self_assessment_marks else '' }}">
     <small class="form-text text-muted">Please enter your self-assessment marks out of 10.</small>
 </div>
 
@@ -377,42 +471,70 @@
         <table class="table table-bordered" id="contributionTable">
             <thead>
                 <tr>
-                    
-                        <th style="width: 5%;">Sr No.</th>
-                        <th style="width: 15%;">Semester</th>
-                        <th style="width: 25%;">Activity</th>
-                        <th style="width: 10%;">Points</th>
-                        <th style="width: 20%;">Order Copy</th>
-                        <th style="width: 20%;">Upload Document</th>
-                        <th style="width: 5%;">Action</th>
-                    
+                    <th>Sr. No.</th>
+                    <th>Semester</th>
+                    <th>Activity</th>
+                    <th>Points</th>
+                    <th>Order Copy</th>
+                    <th>Upload Document</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>1</td>
-                    <td>
-                        <select class="form-control" required title="Select Semester">
-                            <option value="">Select</option>
-                            <option value="I">I</option>
-                            <option value="II">II</option>
-                            <option value="III">III</option>
-                            <option value="IV">IV</option>
-                            <option value="V">V</option>
-                            <option value="VI">VI</option>
-                            <option value="VII">VII</option>
-                            <option value="VIII">VIII</option>
-                        </select>
-                    </td>
-                    <td><input type="text" class="form-control" title="Enter Activity"></td>
-                    <td><input type="number" class="form-control points" title="Enter Points" min="0" max="3" oninput="calculateTeachingTotal()"></td>
-                    <td><input type="text" class="form-control" title="Enter Order Copy"></td>
-                    <td>
-                        <input type="file" class="form-control-file" onchange="uploadDocument(this)"> <!-- Upload Document Input -->
-                        <div class="upload-status"></div>
-                    </td>
-                    <td><button class="btn btn-danger" onclick="removeRow(this, 'contributionTable')">-</button></td>
-                </tr>
+                {% if contribution_data and contribution_data|length > 0 %}
+                    {% for item in contribution_data %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <select class="form-control" title="Select Semester">
+                                <option value="">Select</option>
+                                <option value="I" {% if item.1 == 'I' %}selected{% endif %}>I</option>
+                                <option value="II" {% if item.1 == 'II' %}selected{% endif %}>II</option>
+                                <option value="III" {% if item.1 == 'III' %}selected{% endif %}>III</option>
+                                <option value="IV" {% if item.1 == 'IV' %}selected{% endif %}>IV</option>
+                                <option value="V" {% if item.1 == 'V' %}selected{% endif %}>V</option>
+                                <option value="VI" {% if item.1 == 'VI' %}selected{% endif %}>VI</option>
+                                <option value="VII" {% if item.1 == 'VII' %}selected{% endif %}>VII</option>
+                                <option value="VIII" {% if item.1 == 'VIII' %}selected{% endif %}>VIII</option>
+                            </select>
+                        </td>
+                        <td><input type="text" class="form-control" title="Enter Activity" value="{{ item.2 }}"></td>
+                        <td><input type="number" class="form-control contribution-points" title="Enter Points" min="0" max="5" value="{{ item.3 }}" oninput="calculateTeachingTotal()"></td>
+                        <td><input type="text" class="form-control" title="Enter Order Copy" value="{{ item.4 }}"></td>
+                        <td>
+                            <div class="d-flex">
+                                <input type="file" class="form-control" accept=".pdf,.doc,.docx">
+                                {% if item.5 %}
+                                <a href="/uploads/{{ item.5.split('/')[-1] }}" target="_blank" class="btn btn-info ml-2">View</a>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td><button class="btn btn-danger" onclick="removeRow(this, 'contributionTable'); calculateTeachingTotal();">-</button></td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td>1</td>
+                        <td>
+                            <select class="form-control" required title="Select Semester">
+                                <option value="">Select</option>
+                                <option value="I">I</option>
+                                <option value="II">II</option>
+                                <option value="III">III</option>
+                                <option value="IV">IV</option>
+                                <option value="V">V</option>
+                                <option value="VI">VI</option>
+                                <option value="VII">VII</option>
+                                <option value="VIII">VIII</option>
+                            </select>
+                        </td>
+                        <td><input type="text" class="form-control" title="Enter Activity"></td>
+                        <td><input type="number" class="form-control contribution-points" title="Enter Points" min="0" max="5" oninput="calculateTeachingTotal()"></td>
+                        <td><input type="text" class="form-control" title="Enter Order Copy"></td>
+                        <td><input type="file" class="form-control" accept=".pdf,.doc,.docx"></td>
+                        <td><button class="btn btn-danger" onclick="removeRow(this, 'contributionTable'); calculateTeachingTotal();">-</button></td>
+                    </tr>
+                {% endif %}
             </tbody>
         </table>
         <button class="btn btn-success" onclick="addContributionRow()">+</button>
@@ -421,15 +543,28 @@
         Total Points: <span id="totalsocietyPoints">0</span>/10
     </div>
 </div>  
+
+<!-- Hidden element to store data counts -->
+<div id="formData" 
+     data-self-improvement-count="{{ self_improvement_data|length if self_improvement_data else 0 }}"
+     data-certification-count="{{ certification_data|length if certification_data else 0 }}"
+     data-copyright-count="{{ copyright_data|length if copyright_data else 0 }}"
+     data-resource-count="{{ resource_data|length if resource_data else 0 }}"
+     data-committee-count="{{ committee_data|length if committee_data else 0 }}"
+     data-project-count="{{ project_data|length if project_data else 0 }}"
+     data-contribution-count="{{ contribution_data|length if contribution_data else 0 }}"
+     style="display: none;">
+</div>
+
 <input type="hidden" id="formId" value="{{ form_id }}">
 
     <!-- Reset and Next Buttons -->
     <div class="button-container">
-        <button class="btn btn-secondary" onclick="resetAll()">Reset All</button>
-        <button class="btn btn-primary mx-2" onclick="saveFormData()">Save</button>
-        <button class="btn btn-primary" onclick="goToNext()">Next</button>
+        <input type="hidden" id="formId" value="{{ form_id }}">
+        <button id="resetButton" class="btn btn-warning" onclick="resetAll()">Reset</button>
+        <button id="saveButton" class="btn btn-primary" onclick="saveFormData()">Save</button>
+        <button id="nextButton" class="btn btn-success" onclick="goToNext()">Proceed to Next Step</button>
     </div>
-    <input type="hidden" id="formId" value="{{ form_id }}">
 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -569,7 +704,7 @@ function updateRowNumbers(tableId) {
                             </select>
                         </td>
                 <td><input type="text" class="form-control" title="Enter Activity"></td>
-                <td><input type="number" class="form-control points" title="Enter Points" min="0" max="3" oninput="calculateTeachingTotal();"></td>
+                <td><input type="number" class="form-control contribution-points" title="Enter Points" min="0" max="5" oninput="calculateTeachingTotal();"></td>
                 <td><input type="text" class="form-control" title="Enter Order Copy"></td>
                 <td>
                         <input type="file" class="form-control-file" onchange="uploadDocument(this)"> <!-- Upload Document Input -->
@@ -588,19 +723,50 @@ function updateRowNumbers(tableId) {
 
         // Calculate the total points for Contribution to Society
         function calculateTeachingTotal() {
-            let pointsInputs = document.getElementsByClassName("points");
             let total = 0;
-            for (let i = 0; i < pointsInputs.length; i++) {
-                total += parseFloat(pointsInputs[i].value) || 0;
+            const points = document.querySelectorAll('.contribution-points');
+            
+            points.forEach(input => {
+                const value = parseFloat(input.value) || 0;
+                total += value;
+            });
+            
+            // Cap at 10 points if needed
+            total = Math.min(total, 10);
+            
+            // If total exceeds 10, adjust the last changed input
+            if (total > 10) {
+                // Find the currently focused or last changed input
+                const activeInput = document.activeElement;
+                if (activeInput && activeInput.classList.contains('contribution-points')) {
+                    // Calculate how much we need to reduce this input
+                    const currentValue = parseFloat(activeInput.value) || 0;
+                    const excess = total - 10;
+                    const newValue = Math.max(0, currentValue - excess);
+                    
+                    // Update the input value
+                    activeInput.value = newValue;
+                    
+                    // Recalculate the total
+                    total = 10;
+                }
             }
-            document.getElementById("totalsocietyPoints").textContent = total.toFixed(2);
+            
+            document.getElementById('totalsocietyPoints').textContent = total.toFixed(2);
         }
 
         // Toggle display of upload/download buttons
         function toggleUploadDownload(section) {
-            let checkbox = document.getElementById(section + 'Checkbox');
-            let buttons = document.getElementById(section + 'Buttons');
-            buttons.style.display = checkbox.checked ? 'inline-block' : 'none';
+            console.log(`Toggling section: ${section}`);
+            if (section === 'selfImprovementInitiatives') {
+                const container = document.getElementById('selfImprovementTableContainer');
+                const checkbox = document.getElementById('selfImprovementInitiatives');
+                container.style.display = checkbox.checked ? 'block' : 'none';
+            } else if (section === 'representingCollege') {
+                const container = document.getElementById('representingCollegeTableContainer');
+                const checkbox = document.getElementById('representingCollege');
+                container.style.display = checkbox.checked ? 'block' : 'none';
+            }
         }
 
         // Reset all inputs
@@ -620,114 +786,249 @@ function saveFormData() {
     // Collect form ID
     const formId = document.getElementById('formId').value;
     formData.append('formId', formId);
+    
+    console.log("Saving form data for form ID:", formId);
+    console.log("Number of tables processed: " + document.querySelectorAll('table').length);
 
-    // Define the table configurations
-    const tables = [
-        {
-            id: 'selfImprovementTable',
-            prefix: 'selfImprovement',
-            fields: [
-                { title: 'title', inputType: 'input[title="Enter Title of paper"]' },
-                { title: 'monthYear', inputType: 'input[title="Enter Month/Year"]' },
-                { title: 'conference', inputType: 'input[title="Enter Name of conference"]' },
-                { title: 'isbn', inputType: 'input[title="Enter ISBN/ISSN Number"]' },
-                { title: 'coAuthors', inputType: 'input[title="Enter Name of Co-authors"]' },
-                { title: 'link', inputType: 'input[title="Enter Online link"]' },
-            ],
-        },
-        {
-            id: 'certificationTable',
-            prefix: 'certification',
-            fields: [
-                { title: 'name', inputType: 'input[title="Enter Name of the Certification"]' },
-                { title: 'file', inputType: 'input[type="file"]' },
-            ],
-        },
-        {
-            id: 'titleTable',
-            prefix: 'title',
-            fields: [
-                { title: 'name', inputType: 'input[title="Enter Name of the Title"]' },
-                { title: 'monthYear', inputType: 'input[title="Enter Month/Year"]' },
-                { title: 'registration', inputType: 'input[title="Enter Registration Number"]' },
-            ],
-        },
-        {
-            id: 'resourcePersonTable',
-            prefix: 'resourcePerson',
-            fields: [
-                { title: 'topic', inputType: 'input[title="Enter Topic Name"]' },
-                { title: 'department', inputType: 'input[title="Enter Department"]' },
-                { title: 'institute', inputType: 'input[title="Enter Name of the institute"]' },
-                { title: 'participants', inputType: 'input[title="Enter Number of participants"]' },
-            ],
-        },
-        {
-            id: 'universityCommitteeTable',
-            prefix: 'universityCommittee',
-            fields: [
-                { title: 'committee', inputType: 'input[title="Enter Name of Committee"]' },
-                { title: 'responsibilities', inputType: 'input[title="Enter Roles and Responsibilities"]' },
-                { title: 'designation', inputType: 'input[title="Enter Designation"]' },
-            ],
-        },
-        {
-            id: 'externalProjectsTable',
-            prefix: 'externalProjects',
-            fields: [
-                { title: 'role', inputType: 'input[title="Enter Role"]' },
-                { title: 'description', inputType: 'input[title="Enter Description"]' },
-                { title: 'contribution', inputType: 'input[title="Enter Contribution"]' },
-                { title: 'university', inputType: 'input[title="Enter University"]' },
-                { title: 'duration', inputType: 'input[title="Enter Duration"]' },
-                { title: 'comments', inputType: 'input[title="Enter Comments"]' },
-            ],
-        },
-        {
-            id: 'contributionTable',
-            prefix: 'contribution',
-            fields: [
-                { title: 'semester', inputType: 'select[title="Select Semester"]' },
-                { title: 'activity', inputType: 'input[title="Enter Activity"]' },
-                { title: 'points', inputType: 'input[title="Enter Points"]' },
-                { title: 'orderCopy', inputType: 'input[title="Enter Order Copy"]' },
-                { title: 'file', inputType: 'input[type="file"]' },
-            ],
-        },
-    ];
-
-    tables.forEach(table => {
-        const rows = document.querySelectorAll(`#${table.id} tbody tr`);
-        rows.forEach(row => {
-            const entry = {};
-            table.fields.forEach(field => {
-                const element = row.querySelector(field.inputType);
-                if (element && element.value) {
-                    entry[field.title] = element.value;
-                    if (element.type === 'file' && element.files.length > 0) {
-                        formData.append(`${table.prefix}File[]`, element.files[0]);
-                    }
-                }
-            });
-            if (Object.keys(entry).length > 0) {  // Only append if entry is not empty
-                formData.append(`${table.prefix}[]`, JSON.stringify(entry));
+    // Filter out empty rows and collect Self Improvement table data
+    const selfImprovementTable = document.getElementById('selfImprovementTable');
+    if (selfImprovementTable) {
+        const rows = selfImprovementTable.querySelectorAll('tbody tr');
+        console.log("Self improvement rows found: " + rows.length);
+        
+        rows.forEach((row, index) => {
+            const title = row.querySelector('input[title="Enter Title of paper"]')?.value;
+            const monthYear = row.querySelector('input[title="Enter Month/Year"]')?.value;
+            const conference = row.querySelector('input[title="Enter Name of conference"]')?.value;
+            const isbn = row.querySelector('input[title="Enter ISBN/ISSN Number"]')?.value;
+            const coAuthors = row.querySelector('input[title="Enter Name of Co-authors"]')?.value;
+            const link = row.querySelector('input[title="Enter Online link"]')?.value;
+            
+            // Only add non-empty rows - check title only, other fields can be empty
+            if (title && title.trim() !== '') {
+                const entry = {
+                    title: title,
+                    monthYear: monthYear || '',
+                    conference: conference || '',
+                    isbn: isbn || '',
+                    coAuthors: coAuthors || '',
+                    link: link || ''
+                };
+                
+                formData.append(`selfImprovement[${index}]`, JSON.stringify(entry));
+                console.log(`Added self improvement entry ${index}:`, entry);
             }
         });
-    });
+    }
 
+    // Filter out empty rows and collect Certification table data
+    const certificationTable = document.getElementById('certificationTable');
+    if (certificationTable) {
+        const rows = certificationTable.querySelectorAll('tbody tr');
+        console.log("Certification rows found: " + rows.length);
+        
+        rows.forEach((row, index) => {
+            const name = row.querySelector('input[title="Enter Name of the Certification"]')?.value;
+            const fileInput = row.querySelector('input[type="file"]');
+            
+            // Only add non-empty rows
+            if (name && name.trim() !== '') {
+                const entry = {
+                    name: name
+                };
+                
+                formData.append(`certification[${index}]`, JSON.stringify(entry));
+                console.log(`Added certification entry ${index}:`, entry);
+                
+                if (fileInput && fileInput.files.length > 0) {
+                    formData.append(`certificationFile[${index}]`, fileInput.files[0]);
+                    console.log(`Added certification file for entry ${index}`);
+                }
+            }
+        });
+    }
+
+    // Filter out empty rows and collect Copyright/Patent table data
+    const titleTable = document.getElementById('titleTable');
+    if (titleTable) {
+        const rows = titleTable.querySelectorAll('tbody tr');
+        console.log("Copyright rows found: " + rows.length);
+        
+        rows.forEach((row, index) => {
+            const name = row.querySelector('input[title="Enter Name of the Title"]')?.value;
+            const monthYear = row.querySelector('input[title="Enter Month/Year"]')?.value;
+            const registration = row.querySelector('input[title="Enter Registration Number"]')?.value;
+            
+            // Only add non-empty rows
+            if (name && name.trim() !== '') {
+                const entry = {
+                    name: name,
+                    monthYear: monthYear || '',
+                    registration: registration || ''
+                };
+                
+                formData.append(`title[${index}]`, JSON.stringify(entry));
+                console.log(`Added copyright entry ${index}:`, entry);
+            }
+        });
+    }
+
+    // Filter out empty rows and collect Resource Person table data
+    const resourcePersonTable = document.getElementById('resourcePersonTable');
+    if (resourcePersonTable) {
+        const rows = resourcePersonTable.querySelectorAll('tbody tr');
+        console.log("Resource person rows found: " + rows.length);
+        
+        rows.forEach((row, index) => {
+            const topic = row.querySelector('input[title="Enter Topic Name"]')?.value;
+            const department = row.querySelector('input[title="Enter Department"]')?.value;
+            const institute = row.querySelector('input[title="Enter Name of the institute"]')?.value;
+            const participants = row.querySelector('input[title="Enter Number of participants"]')?.value;
+            
+            // Only add non-empty rows
+            if (topic && topic.trim() !== '') {
+                const entry = {
+                    topic: topic,
+                    department: department || '',
+                    institute: institute || '',
+                    participants: participants || '0'
+                };
+                
+                formData.append(`resourcePerson[${index}]`, JSON.stringify(entry));
+                console.log(`Added resource person entry ${index}:`, entry);
+            }
+        });
+    }
+
+    // Filter out empty rows and collect University Committee table data
+    const universityCommitteeTable = document.getElementById('universityCommitteeTable');
+    if (universityCommitteeTable) {
+        const rows = universityCommitteeTable.querySelectorAll('tbody tr');
+        console.log("Committee rows found: " + rows.length);
+        
+        rows.forEach((row, index) => {
+            const committee = row.querySelector('input[title="Enter Name of Committee"]')?.value;
+            const responsibilities = row.querySelector('input[title="Enter Roles and Responsibilities"]')?.value;
+            const designation = row.querySelector('input[title="Enter Designation"]')?.value;
+            
+            // Only add non-empty rows
+            if (committee && committee.trim() !== '') {
+                const entry = {
+                    committee: committee,
+                    responsibilities: responsibilities || '',
+                    designation: designation || ''
+                };
+                
+                formData.append(`universityCommittee[${index}]`, JSON.stringify(entry));
+                console.log(`Added university committee entry ${index}:`, entry);
+            }
+        });
+    }
+
+    // Filter out empty rows and collect External Projects table data
+    const externalProjectsTable = document.getElementById('externalProjectsTable');
+    if (externalProjectsTable) {
+        const rows = externalProjectsTable.querySelectorAll('tbody tr');
+        console.log("Projects rows found: " + rows.length);
+        
+        rows.forEach((row, index) => {
+            const role = row.querySelector('input[title="Enter Role"]')?.value;
+            const description = row.querySelector('input[title="Enter Description"]')?.value;
+            const contribution = row.querySelector('input[title="Enter Contribution"]')?.value;
+            const university = row.querySelector('input[title="Enter University"]')?.value;
+            const duration = row.querySelector('input[title="Enter Duration"]')?.value;
+            const comments = row.querySelector('input[title="Enter Comments"]')?.value;
+            
+            // Only add non-empty rows
+            if (role && role.trim() !== '') {
+                const entry = {
+                    role: role,
+                    description: description || '',
+                    contribution: contribution || '',
+                    university: university || '',
+                    duration: duration || '',
+                    comments: comments || ''
+                };
+                
+                formData.append(`externalProjects[${index}]`, JSON.stringify(entry));
+                console.log(`Added external project entry ${index}:`, entry);
+            }
+        });
+    }
+
+    // Filter out empty rows and collect Contribution to Society table data
+    const contributionTable = document.getElementById('contributionTable');
+    if (contributionTable) {
+        const rows = contributionTable.querySelectorAll('tbody tr');
+        console.log("Contribution rows found: " + rows.length);
+        
+        rows.forEach((row, index) => {
+            const semester = row.querySelector('select[title="Select Semester"]')?.value;
+            const activity = row.querySelector('input[title="Enter Activity"]')?.value;
+            const points = row.querySelector('input[title="Enter Points"]')?.value;
+            const orderCopy = row.querySelector('input[title="Enter Order Copy"]')?.value;
+            const fileInput = row.querySelector('input[type="file"]');
+            
+            // Only add non-empty rows
+            if (activity && activity.trim() !== '') {
+                const entry = {
+                    semester: semester || '',
+                    activity: activity,
+                    points: points || '0',
+                    orderCopy: orderCopy || ''
+                };
+                
+                formData.append(`contribution[${index}]`, JSON.stringify(entry));
+                console.log(`Added contribution entry ${index}:`, entry);
+                
+                if (fileInput && fileInput.files.length > 0) {
+                    formData.append(`contributionFile[${index}]`, fileInput.files[0]);
+                    console.log(`Added contribution file for entry ${index}`);
+                }
+            }
+        });
+    }
+
+    // Add self-assessment marks
+    const selfAssessmentMarks = document.getElementById('selfAssessmentMarks').value;
+    formData.append('selfAssessmentMarks', selfAssessmentMarks || '0');
+    console.log("Self assessment marks:", selfAssessmentMarks);
+
+    // Print total form entries to verify all data is included
+    console.log("Total form entries: ", formData.getAll("formId").length);
+
+    // Send the form data to the server
+    console.log("Sending form data to server...");
+    document.getElementById("saveButton").disabled = true;
+    document.getElementById("saveButton").textContent = "Saving...";
+    
     fetch('/save-form3-data', {
         method: 'POST',
         body: formData,
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log("Server response status:", response.status);
+        return response.json();
+    })
     .then(data => {
+        document.getElementById("saveButton").disabled = false;
+        document.getElementById("saveButton").textContent = "Save";
+        
         if (data.status === 'success') {
-            alert('Data saved successfully');
+            alert('Form data saved successfully');
+            console.log("Save successful:", data);
         } else {
             alert('Error: ' + data.message);
+            console.error("Save error:", data);
         }
     })
-    .catch(error => console.error('Error:', error));
+    .catch(error => {
+        document.getElementById("saveButton").disabled = false;
+        document.getElementById("saveButton").textContent = "Save";
+        
+        console.error('Error:', error);
+        alert('Error saving form data: ' + error);
+    });
 }
 
 
@@ -817,7 +1118,49 @@ function goToNext() {
     });
 }
 
-
+// Document load event listener to initialize the form
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("DOM loaded, initializing form");
+    
+    // Initialize the table visibility based on checkboxes
+    toggleUploadDownload('selfImprovementInitiatives');
+    toggleUploadDownload('representingCollege');
+    
+    // Calculate initial totals for contribution table
+    calculateTeachingTotal();
+    
+    // Get data counts from data attributes
+    const selfImprovementDataCount = document.getElementById('formData').getAttribute('data-self-improvement-count');
+    const certificationDataCount = document.getElementById('formData').getAttribute('data-certification-count');
+    const copyrightDataCount = document.getElementById('formData').getAttribute('data-copyright-count');
+    
+    const resourceDataCount = document.getElementById('formData').getAttribute('data-resource-count');
+    const committeeDataCount = document.getElementById('formData').getAttribute('data-committee-count');
+    const projectDataCount = document.getElementById('formData').getAttribute('data-project-count');
+    
+    console.log("Data counts:", {
+        selfImprovementDataCount,
+        certificationDataCount,
+        copyrightDataCount,
+        resourceDataCount,
+        committeeDataCount,
+        projectDataCount
+    });
+    
+    // Show self-improvement section if it has data
+    if (parseInt(selfImprovementDataCount) > 0 || parseInt(certificationDataCount) > 0 || parseInt(copyrightDataCount) > 0) {
+        console.log("Found self-improvement data, showing section");
+        document.getElementById('selfImprovementInitiatives').checked = true;
+        toggleUploadDownload('selfImprovementInitiatives');
+    }
+    
+    // Show representing college section if it has data
+    if (parseInt(resourceDataCount) > 0 || parseInt(committeeDataCount) > 0 || parseInt(projectDataCount) > 0) {
+        console.log("Found representing college data, showing section");
+        document.getElementById('representingCollege').checked = true;
+        toggleUploadDownload('representingCollege');
+    }
+});
 
     </script>
 </body>

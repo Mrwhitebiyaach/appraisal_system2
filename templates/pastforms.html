@@ -11,6 +11,18 @@
             background-size: cover;
             margin: 0;
         }
+        /* Optional: Styling for the print button */
+        #printButton {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #printButton:hover {
+            background-color: #0056b3;
+        }
         .top-bar {
             position: absolute;
             top: 20px;
@@ -79,6 +91,61 @@
             <button type="submit" class="btn btn-primary">Search</button>
         </form>
     </div>
+ <pre></pre>
+
+<!-- User Details Container - Only show when user_data is available -->
+{% if user_data %}
+<div class="container">
+    
+    <h2>User Details</h2>
+    <table>
+        <tr>
+            <th>User ID</th>
+            <td>{{ user_data[0] }}</td>
+        </tr>
+        <tr>
+            <th>Email</th>
+            <td>{{ user_data[1] }}</td>
+        </tr>
+        <tr>
+            <th>Department</th>
+            <td>{{ user_data[2] }}</td>
+        </tr>
+        <tr>
+            <th>Name</th>
+            <td>{{ user_data[3] }}</td>
+        </tr>
+        <tr>
+            <th>Designation</th>
+            <td>{{ user_data[4] }}</td>
+        </tr>
+        <tr>
+            <th>Date of Joining</th>
+            <td>{{ user_data[5] }}</td>
+        </tr>
+        <tr>
+            <th>Date of Birth</th>
+            <td>{{ user_data[6] }}</td>
+        </tr>
+        <tr>
+            <th>Educational Qualification</th>
+            <td>{{ user_data[7] }}</td>
+        </tr>
+        <tr>
+            <th>Experience</th>
+            <td>{{ user_data[8] }}</td>
+        </tr>
+    </table>
+
+    {% if form_id %}
+    <h2>Form Information</h2>
+    <p>Form ID: {{ form_id }}</p>
+    <p>Academic Year: {{ selected_year }}</p>
+    {% endif %}
+   
+</div>
+{% endif %}
+
  <pre></pre>
     <!-- Table to display teaching data if available -->
     {% if teaching_data %}
@@ -465,7 +532,7 @@
             {% endif %}
             
 
-             <pre> </pre>
+            <pre> </pre>
 
             {% if points_data %}
 <div class="table-container">
@@ -520,6 +587,13 @@
     </table>
 </div>
 {% endif %}
+<pre> </pre>
+
+{% if user_data %}
+<button id="printButton" onclick="window.print()">Print</button>
+{% endif %}
+
+<pre></pre>
 <div class="text-center">
     <a href="/landing" class="btn btn-primary">Home</a>
 </div>
@@ -553,6 +627,10 @@
 
 // Call the function to populate the dropdown when the page loads
 window.onload = generateAcademicYears;
+
+function printPage() {
+            window.print();
+        }
 
     </script>
 </body>

@@ -186,24 +186,18 @@
     </a>
     <div id="flashMessage" style="display:none; color: red; font-weight: bold; margin-bottom: 10px;"></div>
   <pre></pre>
-    <!-- Department activities Form -->
+   <!-- Department Activities Form with dynamic data loading -->
 <div class="table-container teaching-process-container" style="width: 100%; max-width: 1200px; margin: 0 auto;">
     <div class="table-box" style="width: 100%;">
-        <h3 class="table-title">Department activities</h3>
-
+        <h3 class="table-title">Department Activities</h3>
         <div class="instructions">
             <p>
-                1. This section summarizes all the responsibilities assigned by Head of the Department to a teacher during the academic year
-                under consideration through a proper office order.<br><br>
-                2. This may include initiatives shown towards responsibilities as various departmental coordinators, Lab I/C, Time Table I/C,
-                accreditation work, sponsored projects related work, other development work, departmental activities, submission of APR,
-                compilation of departmental newsletter etc.<br><br>
-                3. The faculty member will earn 3 points per semester for each activity<br>
-                up to a maximum of 20<br><br>
-                4. The max file size one can upload is 1mb.
+                1. This section summarizes all the responsibilities assigned by Head of the Department to a teacher during the academic year under consideration through a proper office order.<br><br>
+                2. This may include initiatives shown towards responsibilities as various departmental coordinators, Lab I/C, Time Table I/C, accreditation work, sponsored projects related work, other development work, departmental activities, submission of APR, compilation of departmental newsletter etc.<br><br>
+                3. The faculty member will earn 3 points per semester for each activity up to a maximum of 20.<br><br>
+                4. The max file size one can upload is 1MB. Document uploads are optional.
             </p>
         </div>
-
         <table class="table table-bordered" style="table-layout: fixed; width: 100%;">
             <thead>
                 <tr>
@@ -216,32 +210,31 @@
                     <th style="width: 5%;">Action</th>
                 </tr>
             </thead>
-            
             <tbody id="deptTable">
-                <tr>
-                    <td>1</td>
+                {% for row in dept_activities_data %}
+                <tr data-srno="{{ loop.index }}">
+                    <td class="sr-no">{{ loop.index }}</td>
                     <td>
                         <select class="form-control" required title="Select Semester">
                             <option value="">Select</option>
-                            <option value="I">I</option>
-                            <option value="II">II</option>
-                            <option value="III">III</option>
-                            <option value="IV">IV</option>
-                            <option value="V">V</option>
-                            <option value="VI">VI</option>
-                            <option value="VII">VII</option>
-                            <option value="VIII">VIII</option>
+                            <option value="ODD" {% if row[0] == 'ODD' %}selected{% endif %}>ODD</option>
+                            <option value="EVEN" {% if row[0] == 'EVEN' %}selected{% endif %}>EVEN</option>
+                            <option value="EVEN/ODD" {% if row[0] == 'EVEN/ODD' %}selected{% endif %}>EVEN/ODD</option>
                         </select>
                     </td>
-                    <td><input type="text" class="form-control" title="Enter Activity" onblur="validateField(this)"></td>
-                    <td><input type="number" class="form-control points" title="Enter Points" min="0" max="3" oninput="calculateTeachingTotal()" onblur="validateField(this)"></td>
-                    <td><input type="text" class="form-control" title="Enter Order Copy" onblur="validateField(this)"></td>
+                    <td><input type="text" class="form-control" value="{{ row[1] }}" required title="Enter Activity"></td>
+                    <td><input type="number" class="form-control points" value="{{ row[2] }}" min="0" max="3" oninput="calculateTeachingTotal()" required title="Enter Points"></td>
+                    <td><input type="text" class="form-control" value="{{ row[3] }}" required title="Enter Order Copy"></td>
                     <td>
-                        <input type="file" class="form-control-file" onchange="uploadDocument(this)">
+                        {% if row[4] %}
+                        <a href="{{ url_for('static', filename=row[4]) }}" target="_blank">View Upload</a>
+                        {% endif %}
+                        <input type="file" class="form-control-file" onchange="validateFileSize(this, 1)" title="Upload Document (Optional)">
                         <div class="upload-status"></div>
                     </td>
                     <td><button class="btn btn-danger" onclick="removeRow(this, 'deptTable')">-</button></td>
                 </tr>
+                {% endfor %}
             </tbody>
         </table>
         <button class="btn btn-success" onclick="addTeachingRow()">+</button>
@@ -251,68 +244,66 @@
     </div>
 </div>
 
-    <!-- Institute activities Form -->
-    <div class="table-container form-section">
-        <div class="table-box">
-            <h3 class="table-title">Institute activities</h3>
-            <div class="instructions">
-                <p>
-                    1. This section summarizes all the responsibilities assigned by Head of the Institute to the faculty member during the academic
-                    year under consideration through a proper office order.<br><br>
-                    2. This may include responsibilities like Head of Department, Dean, Coordinator, Warden, Sports In charge, Cultural In charge,
-                    NBA Coordinator, NAAC Coordinator, Timetable Coordinator, R & D Coordinator, In charge of Industrial collaboration, etc.<br><br>
-                    3. The faculty member will earn points per semester for each activity up to a maximum of 10 as specified below.<br><br>
-                    4. The max file size one can upload is 1mb.
-                </p>
-            </div>
-            <table class="table table-bordered">
-                
-                <thead>
-                    <tr>
-                        <th style="width: 5%;">Sr No.</th>
-                        <th style="width: 15%;">Semester</th>
-                        <th style="width: 25%;">Activity</th>
-                        <th style="width: 10%;">Points</th>
-                        <th style="width: 20%;">Order Copy</th>
-                        <th style="width: 20%;">Upload Document</th>
-                        <th style="width: 5%;">Action</th>
-                    </tr>
-                </thead>
-                <tbody id="instituteTable">
-                    <tr>
-                        <td>1</td>
-                        <td>
-                            <select class="form-control" required title="Select Semester">
-                                <option value="">Select</option>
-                                <option value="I">I</option>
-                                <option value="II">II</option>
-                                <option value="III">III</option>
-                                <option value="IV">IV</option>
-                                <option value="V">V</option>
-                                <option value="VI">VI</option>
-                                <option value="VII">VII</option>
-                                <option value="VIII">VIII</option>
-                            </select>
-                        </td>
-                        <td><input type="text" class="form-control" title="Enter Activity" onblur="validateField(this)"></td>
-                        <td><input type="number" class="form-control points" title="Enter Points" min="0" max="3" oninput="calculateFeedbackTotal()" onblur="validateField(this)"></td>
-                        <td><input type="text" class="form-control" title="Enter Order Copy" onblur="validateField(this)"></td>
-                        <td>
-                            <input type="file" class="form-control-file" onchange="uploadDocument(this)">
-                            <div class="upload-status"></div>
-                        </td>
-                        <td><button class="btn btn-danger" onclick="removeRow(this, 'instituteTable')">-</button></td>
-                    </tr>
-                </tbody>
-            </table>
-            <button class="btn btn-success" onclick="addFeedbackRow()">+</button>
-        </div>
-        <div class="total-box">
-            Total Points: <span id="totalinstitutePoints">0</span>/10
-        </div>
-        <div id="flashMessage" style="display:none; color: red; font-weight: bold; margin-bottom: 10px;"></div>
 
+<!-- Institute Activities Form with dynamic data loading -->
+<div class="table-container form-section">
+    <div class="table-box">
+        <h3 class="table-title">Institute activities</h3>
+        <div class="instructions">
+            <p>
+                1. This section summarizes all the responsibilities assigned by Head of the Institute to the faculty member during the academic year under consideration through a proper office order.<br><br>
+                2. This may include responsibilities like Head of Department, Dean, Coordinator, Warden, Sports In charge, Cultural In charge, NBA Coordinator, NAAC Coordinator, Timetable Coordinator, R &amp; D Coordinator, In charge of Industrial collaboration, etc.<br><br>
+                3. The faculty member will earn points per semester for each activity up to a maximum of 10 as specified below.<br><br>
+                4. The max file size one can upload is 1mb. Document uploads are optional.
+            </p>
+        </div>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th style="width: 5%;">Sr No.</th>
+                    <th style="width: 15%;">Semester</th>
+                    <th style="width: 25%;">Activity</th>
+                    <th style="width: 10%;">Points</th>
+                    <th style="width: 20%;">Order Copy</th>
+                    <th style="width: 20%;">Upload Document</th>
+                    <th style="width: 5%;">Action</th>
+                </tr>
+            </thead>
+            <tbody id="instituteTable">
+                {% for row in institute_activities_data %}
+                <tr data-srno="{{ loop.index }}">
+                    <td class="sr-no">{{ loop.index }}</td>
+                    <td>
+                        <select class="form-control" required title="Select Semester">
+                            <option value="">Select</option>
+                            <option value="ODD" {% if row[0] == 'ODD' %}selected{% endif %}>ODD</option>
+                            <option value="EVEN" {% if row[0] == 'EVEN' %}selected{% endif %}>EVEN</option>
+                            <option value="EVEN/ODD" {% if row[0] == 'EVEN/ODD' %}selected{% endif %}>EVEN/ODD</option>
+                        </select>
+                    </td>
+                    <td><input type="text" class="form-control" value="{{ row[1] }}" required title="Enter Activity"></td>
+                    <td><input type="number" class="form-control points" value="{{ row[2] }}" min="0" max="3" oninput="calculateFeedbackTotal()" required title="Enter Points"></td>
+                    <td><input type="text" class="form-control" value="{{ row[3] }}" required title="Enter Order Copy"></td>
+                    <td>
+                        {% if row[4] %}
+                        <a href="{{ url_for('static', filename=row[4]) }}" target="_blank">View Upload</a>
+                        {% endif %}
+                        <input type="file" class="form-control-file" onchange="validateFileSize(this, 1)" title="Upload Document (Optional)">
+                        <div class="upload-status"></div>
+                    </td>
+                    <td><button class="btn btn-danger" onclick="removeRow(this, 'instituteTable')">-</button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button class="btn btn-success" onclick="addFeedbackRow()">+</button>
     </div>
+    <div class="total-box">
+        Total Points: <span id="totalinstitutePoints">0</span>/10
+    </div>
+    <div id="flashMessage" style="display:none; color: red; font-weight: bold; margin-bottom: 10px;"></div>
+</div>
+
 
     <!-- Reset and Next Buttons -->
     <div class="button-container">
@@ -334,124 +325,231 @@
     <script>
    
 
-// Validation Function for individual fields
+// Validation Function for individual fields with better error handling
 function validateField(field) {
-    if (!field.value.trim()) {
-        field.style.borderColor = 'red';  // Highlight invalid field
-        return false;
-    } else {
-        field.style.borderColor = '';     // Reset field styling if valid
+    const value = field.value.trim();
+    const fieldName = field.getAttribute('title') || 'This field';
+    const isOptional = fieldName.toLowerCase().includes('optional');
+    
+    // If the field is optional and empty, it's valid
+    if (isOptional && !value) {
+        field.style.borderColor = '';
         return true;
     }
+    
+    if (!value) {
+        field.style.borderColor = 'red';
+        showError(`${fieldName} is required.`);
+        return false;
+    }
+    
+    if (field.type === 'number') {
+        const numValue = parseFloat(value);
+        const min = parseFloat(field.min);
+        const max = parseFloat(field.max);
+        
+        if (isNaN(numValue)) {
+            field.style.borderColor = 'red';
+            showError(`${fieldName} must be a valid number.`);
+            return false;
+        }
+        
+        if (numValue < min || numValue > max) {
+            field.style.borderColor = 'red';
+            showError(`${fieldName} must be between ${min} and ${max}.`);
+            return false;
+        }
+    }
+    
+    field.style.borderColor = '';
+    return true;
 }
 
-// Validate all fields in the form before saving
-function validateAndSave() {
-    let isValid = true;
-
-    // Clear any previous error messages
-    const flashMessage = document.getElementById('flashMessage');
-    flashMessage.textContent = '';
-    flashMessage.style.display = 'none';
-
-    // Validate Department activities form
-    document.querySelectorAll('#deptTable input').forEach(input => {
-        if (!validateField(input)) {
-            isValid = false;
-        }
-    });
-
-    // Validate Institute activities form
-    document.querySelectorAll('#instituteTable input').forEach(input => {
-        if (!validateField(input)) {
-            isValid = false;
-        }
-    });
-
-    // If all fields are valid, proceed to save form data
-    if (isValid) {
-        saveFormData();  // This is your form submission logic
+// Update the showError function to handle success messages too
+function showError(message, isSuccess = false) {
+    if (isSuccess) {
+        // Use alert for success messages
+        alert(message);
     } else {
-        // Show flash message for invalid form
-        flashMessage.textContent = 'Please fill in all required fields.';
+        // Use flashMessage for errors
+        const flashMessage = document.getElementById('flashMessage');
+        flashMessage.textContent = message;
+        flashMessage.style.backgroundColor = '#f8d7da';
+        flashMessage.style.color = '#721c24';
+        flashMessage.style.borderColor = '#f5c6cb';
         flashMessage.style.display = 'block';
-        // In case of validation bypass, add a pop-up warning
-        alert('Validation error: Please complete all required fields.');
+        
+        setTimeout(() => {
+            flashMessage.style.display = 'none';
+        }, 3000);
     }
 }
 
-// Add new row to Department activities form
+// Validate file size before upload - making this truly optional
+function validateFileSize(input, maxSizeMB) {
+    // If no file selected, it's valid (optional upload)
+    if (!input.files.length) {
+        return true;
+    }
+    
+    const fileSize = input.files[0].size / (1024 * 1024); // Convert to MB
+    if (fileSize > maxSizeMB) {
+        showError(`File size must be less than ${maxSizeMB}MB`);
+        input.value = ''; // Clear the file input
+        return false;
+    }
+    return true;
+}
+
+// Add new row to Department activities form with validation
 function addTeachingRow() {
     let table = document.getElementById("deptTable");
+    let newIndex = table.rows.length + 1;
     let row = table.insertRow();
+    row.setAttribute('data-srno', newIndex);
+    
     row.innerHTML = `
-        <td>${table.rows.length}</td>
-         <select class="form-control" required title="Select Semester">
-                    <option value="">Select</option>
-                    <option value="I">I</option>
-                    <option value="II">II</option>
-                    <option value="III">III</option>
-                    <option value="IV">IV</option>
-                    <option value="V">V</option>
-                    <option value="VI">VI</option>
-                    <option value="VII">VII</option>
-                    <option value="VIII">VIII</option>
-                </select>
-            </td>
-            <td><input type="text" class="form-control" title="Enter Activity" onblur="validateField(this)"></td>
-            <td><input type="number" class="form-control points" title="Enter Points" min="0" max="3" oninput="calculateTeachingTotal()" onblur="validateField(this)"></td>
-            <td><input type="text" class="form-control" title="Enter Order Copy" onblur="validateField(this)"></td>
-            <td>
-                <input type="file" class="form-control-file" onchange="uploadDocument(this)">
-                <div class="upload-status"></div>
-            </td>
-            <td><button class="btn btn-danger" onclick="removeRow(this, 'deptTable')">-</button></td>
+        <td class="sr-no">${newIndex}</td>
+        <td>
+            <select class="form-control" required title="Select Semester">
+                <option value="">Select</option>
+                <option value="ODD">ODD</option>
+                <option value="EVEN">EVEN</option>
+                <option value="EVEN/ODD">EVEN/ODD</option>
+            </select>
+        </td>
+        <td><input type="text" class="form-control" required title="Enter Activity"></td>
+        <td><input type="number" class="form-control points" min="0" max="3" required title="Enter Points" oninput="calculateTeachingTotal()"></td>
+        <td><input type="text" class="form-control" required title="Enter Order Copy"></td>
+        <td>
+            <input type="file" class="form-control-file" onchange="validateFileSize(this, 1)" title="Upload Document (Optional)">
+            <div class="upload-status"></div>
+        </td>
+        <td><button class="btn btn-danger" onclick="removeRow(this, 'deptTable')">-</button></td>
     `;
+    updateSerialNumbers('deptTable');
 }
 
 // Add new row to Institute activities form
 function addFeedbackRow() {
     let table = document.getElementById("instituteTable");
+    let newIndex = table.rows.length + 1;
     let row = table.insertRow();
+    row.setAttribute('data-srno', newIndex);
+    
     row.innerHTML = `
-        <td>${table.rows.length}</td>
+        <td class="sr-no">${newIndex}</td>
         <td>
-             <select class="form-control" required title="Select Semester">
-                    <option value="">Select</option>
-                    <option value="I">I</option>
-                    <option value="II">II</option>
-                    <option value="III">III</option>
-                    <option value="IV">IV</option>
-                    <option value="V">V</option>
-                    <option value="VI">VI</option>
-                    <option value="VII">VII</option>
-                    <option value="VIII">VIII</option>
-                </select>
-            </td>
-            <td><input type="text" class="form-control" title="Enter Activity" onblur="validateField(this)"></td>
-            <td><input type="number" class="form-control points" title="Enter Points" min="0" max="3" oninput="calculateFeedbackTotal()" onblur="validateField(this)"></td>
-            <td><input type="text" class="form-control" title="Enter Order Copy" onblur="validateField(this)"></td>
-            <td>
-                <input type="file" class="form-control-file" onchange="uploadDocument(this)">
-                <div class="upload-status"></div>
-            </td>
-            <td><button class="btn btn-danger" onclick="removeRow(this, 'instituteTable')">-</button></td>
+            <select class="form-control" required title="Select Semester">
+                <option value="">Select</option>
+                <option value="ODD">ODD</option>
+                <option value="EVEN">EVEN</option>
+                <option value="EVEN/ODD">EVEN/ODD</option>
+            </select>
+        </td>
+        <td><input type="text" class="form-control" required title="Enter Activity"></td>
+        <td><input type="number" class="form-control points" min="0" max="3" required title="Enter Points" oninput="calculateFeedbackTotal()"></td>
+        <td><input type="text" class="form-control" required title="Enter Order Copy"></td>
+        <td>
+            <input type="file" class="form-control-file" onchange="validateFileSize(this, 1)" title="Upload Document (Optional)">
+            <div class="upload-status"></div>
+        </td>
+        <td><button class="btn btn-danger" onclick="removeRow(this, 'instituteTable')">-</button></td>
     `;
+    updateSerialNumbers('instituteTable');
 }
 
-// Remove row from any table
+let deletedDeptRows = [];
+let deletedInstituteRows = [];
+
+// Remove row from any table with AJAX deletion logic applied
 function removeRow(button, tableId) {
     let table = document.getElementById(tableId);
     let row = button.closest("tr");
-    table.deleteRow(row.rowIndex - 1); // Adjust row index as per the table structure
+    // Try to get a unique identifier (data-srno) if it exists
+    let srno = row.getAttribute('data-srno');
+    // If a global form ID is used (as in your other code), grab it (optional)
+    let formId = document.getElementById('formId') ? document.getElementById('formId').value : '';
 
-    // Recalculate total after removing row
-    if (tableId === 'deptTable') {
-        calculateTeachingTotal();
-    } else if (tableId === 'instituteTable') {
-        calculateFeedbackTotal();
+    // First disable the button to prevent multiple clicks
+    button.disabled = true;
+    
+    if (srno) {
+        // Call the appropriate AJAX deletion function if this row exists in the database
+        if (tableId === 'deptTable') {
+            deleteDeptRowFromDatabase(row, formId, srno);
+        } else if (tableId === 'instituteTable') {
+            deleteInstituteRowFromDatabase(row, formId, srno);
+        }
+    } else {
+        // For newly added rows that don't have a database ID yet, just remove from DOM
+        row.remove();
+        // Update serial numbers
+        updateSerialNumbers(tableId);
+        
+        // Recalculate totals
+        if (tableId === 'deptTable') {
+            calculateTeachingTotal();
+        } else if (tableId === 'instituteTable') {
+            calculateFeedbackTotal();
+        }
     }
 }
+
+// AJAX call to delete a department row from the database
+function deleteDeptRowFromDatabase(row, formId, srno) {
+    // Remove the row from the UI first for better UX
+    row.remove();
+    recalculateTeachingRowNumbers();
+    calculateTeachingTotal();
+
+    // Make AJAX call to delete from database
+    $.ajax({
+        url: '/delete-dept-row',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            form_id: formId,
+            srno: srno
+        }),
+        success: function(response) {
+            console.log('Row deleted successfully from database');
+            // No need to show success message since the UI already reflects the change
+        },
+        error: function(xhr, status, error) {
+            console.error('Error deleting row from database:', error);
+            showError('The row was removed from the page, but there was a problem deleting it from the database.');
+        }
+    });
+}
+
+// AJAX call to delete an institute row from the database
+function deleteInstituteRowFromDatabase(row, formId, srno) {
+    // Remove the row from the UI first for better UX
+    row.remove();
+    recalculateInstituteRowNumbers();
+    calculateFeedbackTotal();
+
+    // Make AJAX call to delete from database
+    $.ajax({
+        url: '/delete-institute-row',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            form_id: formId,
+            srno: srno
+        }),
+        success: function(response) {
+            console.log('Row deleted successfully from database');
+            // No need to show success message since the UI already reflects the change
+        },
+        error: function(xhr, status, error) {
+            console.error('Error deleting row from database:', error);
+            showError('The row was removed from the page, but there was a problem deleting it from the database.');
+        }
+    });
+}
+
         
 
 // Calculate total points for Department activities
@@ -502,18 +600,38 @@ function calculateTeachingTotal() {
             }
         }
 
-// upload function 
-        function uploadDocument(input) {
+// Update the uploadDocument function
+function uploadDocument(input) {
     const file = input.files[0];
     const uploadStatus = input.nextElementSibling;
 
     if (!file) {
-        alert("Please select a file to upload.");
+        showError("Please select a file to upload.");
+        return;
+    }
+
+    // Check file size before uploading
+    if (file.size > 1024 * 1024) { // 1MB
+        showError("File size must be less than 1MB");
+        input.value = ''; // Clear the file input
+        return;
+    }
+
+    // Check file type
+    const allowedTypes = ['.pdf', '.doc', '.docx'];
+    const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    if (!allowedTypes.includes(fileExt)) {
+        showError(`Invalid file type. Allowed types are: ${allowedTypes.join(', ')}`);
+        input.value = '';
         return;
     }
 
     const formData = new FormData();
     formData.append('file', file);
+
+    // Show loading state
+    uploadStatus.textContent = 'Uploading...';
+    uploadStatus.style.color = 'blue';
 
     fetch('/upload', {
         method: 'POST',
@@ -524,133 +642,240 @@ function calculateTeachingTotal() {
         if (data.error) {
             uploadStatus.textContent = `Error: ${data.error}`;
             uploadStatus.style.color = 'red';
+            input.value = ''; // Clear the file input
         } else {
             uploadStatus.textContent = `Uploaded: ${data.filename}`;
             uploadStatus.style.color = 'green';
+            // Store the filename in a hidden input for form submission
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'uploaded_file';
+            hiddenInput.value = data.filename;
+            input.parentNode.appendChild(hiddenInput);
         }
     })
     .catch(error => {
         console.error('Error:', error);
         uploadStatus.textContent = 'Upload failed!';
         uploadStatus.style.color = 'red';
+        input.value = ''; // Clear the file input
     });
 }
 
 
 
 
+// Update the saveFormData function with better debugging
 function saveFormData() {
-    const formData = new FormData(); // To send both files and form data
-    let totalFileSize = 0; // Track total file size
-
-    // Collect department activities
-document.querySelectorAll('#deptTable tr').forEach((row, index) => {
-    const semester = row.querySelector('select[title="Select Semester"]');
-    const activity = row.querySelector('input[title="Enter Activity"]');
-    const points = row.querySelector('.points');
-    const orderCopy = row.querySelector('input[title="Enter Order Copy"]');
-    const fileInput = row.querySelector('input[type="file"]');
-
-    // Log the values for debugging
-    console.log(`Row ${index} - Semester: ${semester ? semester.value : 'N/A'}, Activity: ${activity ? activity.value : 'N/A'}, Points: ${points ? points.value : 'N/A'}, Order Copy: ${orderCopy ? orderCopy.value : 'N/A'}`);
-
-    // Ensure all required fields are filled
-    if (semester && activity && points && orderCopy) {
-        formData.append(`departmentActivities[${index}][semester]`, semester.value);
-        formData.append(`departmentActivities[${index}][activity]`, activity.value);
-        formData.append(`departmentActivities[${index}][points]`, points.value);
-        formData.append(`departmentActivities[${index}][orderCopy]`, orderCopy.value);
-
-        // Check if a file is selected and append it
-        if (fileInput.files[0]) {
-            const fileSize = fileInput.files[0].size;
-            if (fileSize > 1 * 1024 * 1024) { // 1 MB
-                alert(`File ${fileInput.files[0].name} exceeds 1 MB limit.`);
-                return; // Exit the function if file size exceeds limit
+    console.log("Save button clicked");
+    const flashMessage = document.getElementById('flashMessage');
+    flashMessage.style.display = 'none';
+    
+    let isValid = true;
+    let totalDeptPoints = 0;
+    let totalInstitutePoints = 0;
+    let totalFileSize = 0;
+    
+    // Validate Department activities
+    document.querySelectorAll('#deptTable tr').forEach(row => {
+        // Validate required fields (excluding file input)
+        const requiredFields = row.querySelectorAll('select, input[type="text"], input[type="number"]');
+        requiredFields.forEach(field => {
+            if (!validateField(field)) {
+                isValid = false;
             }
-            totalFileSize += fileSize; // Update total file size
-            formData.append(`departmentActivities[${index}][file]`, fileInput.files[0]);
-            console.log(`Added file for Department Activity ${index}:`, fileInput.files[0].name); // Debug: Log added file
+        });
+
+        // Add up points
+        const pointsField = row.querySelector('.points');
+        if (pointsField) {
+            totalDeptPoints += parseFloat(pointsField.value) || 0;
         }
-    } else {
-        console.log(`Row ${index} is missing required fields.`); // Log if required fields are missing
-    }
-});
 
-// Log final department activities collected
-console.log('Final Department Activities:', formData.getAll('departmentActivities')); // Debug: Log collected department activities
-
-    // Collect institute activities
-    document.querySelectorAll('#instituteTable tr').forEach((row, index) => {
-        const semester = row.querySelector('select[title="Select Semester"]');
-        const activity = row.querySelector('input[title="Enter Activity"]');
-        const points = row.querySelector('.points');
-        const orderCopy = row.querySelector('input[title="Enter Order Copy"]');
+        // Check file size if a file is selected
         const fileInput = row.querySelector('input[type="file"]');
-
-        // Ensure all required fields are filled
-        if (semester && activity && points && orderCopy) {
-            formData.append(`instituteActivities[${index}][semester]`, semester.value);
-            formData.append(`instituteActivities[${index}][activity]`, activity.value);
-            formData.append(`instituteActivities[${index}][points]`, points.value);
-            formData.append(`instituteActivities[${index}][orderCopy]`, orderCopy.value);
-
-            // Check if a file is selected and append it
-            if (fileInput.files[0]) {
-                // Check file size before appending to formData
-                const fileSize = fileInput.files[0].size;
-                if (fileSize > 1 * 1024 * 1024) { // 1 MB
-                    alert(`File ${fileInput.files[0].name} exceeds 1 MB limit.`);
-                    return; // Exit the function if file size exceeds limit
-                }
-                totalFileSize += fileSize; // Update total file size
-                formData.append(`instituteActivities[${index}][file]`, fileInput.files[0]);
-                console.log(`Added file for Institute Activity ${index}:`, fileInput.files[0].name); // Debug: Log added file
+        if (fileInput && fileInput.files.length > 0) {
+            totalFileSize += fileInput.files[0].size;
+        }
+    });
+    
+    // Validate Institute activities
+    document.querySelectorAll('#instituteTable tr').forEach(row => {
+        // Validate required fields (excluding file input)
+        const requiredFields = row.querySelectorAll('select, input[type="text"], input[type="number"]');
+        requiredFields.forEach(field => {
+            if (!validateField(field)) {
+                isValid = false;
             }
+        });
+
+        // Add up points
+        const pointsField = row.querySelector('.points');
+        if (pointsField) {
+            totalInstitutePoints += parseFloat(pointsField.value) || 0;
+        }
+
+        // Check file size if a file is selected
+        const fileInput = row.querySelector('input[type="file"]');
+        if (fileInput && fileInput.files.length > 0) {
+            totalFileSize += fileInput.files[0].size;
         }
     });
-
-    // Check total file size against max limit before sending
-    if (totalFileSize > (100 * 1024 * 1024)) { // 100 MB
-        alert("Total file size exceeds 100 MB limit.");
-        return; // Prevent sending if total file size exceeds limit
+    
+    // Check total points constraints
+    if (totalDeptPoints > 20) {
+        showError('Department activities total points cannot exceed 20');
+        isValid = false;
     }
-
-    // Add form ID if applicable
-    const formId = document.getElementById('formId');
-    if (formId) {
-        formData.append('formId', formId.value);
-        console.log('Form ID added to form data:', formId.value); // Debug: Log form ID
+    
+    if (totalInstitutePoints > 10) {
+        showError('Institute activities total points cannot exceed 10');
+        isValid = false;
     }
-
-    // Send data to the backend using AJAX
+    
+    // Check total file size only if files are uploaded
+    if (totalFileSize > 100 * 1024 * 1024) { // 100MB
+        showError('Total file size exceeds 100MB limit');
+        isValid = false;
+    }
+    
+    if (!isValid) {
+        return;
+    }
+    
+    console.log("Validation passed, preparing form data");
+    
+    // Proceed with form submission if validation passes
+    const formData = new FormData();
+    
+    // Collect and validate department activities data
+    document.querySelectorAll('#deptTable tr').forEach((row, index) => {
+        const srno = row.getAttribute('data-srno') || (index + 1);
+        const semester = row.querySelector('select').value;
+        const activity = row.querySelector('input[title="Enter Activity"]').value;
+        const points = row.querySelector('.points').value;
+        const orderCopy = row.querySelector('input[title="Enter Order Copy"]').value;
+        const fileInput = row.querySelector('input[type="file"]');
+        const uploadedFile = row.querySelector('input[name="uploaded_file"]');
+        
+        formData.append(`departmentActivities[${index}][srno]`, srno);
+        formData.append(`departmentActivities[${index}][semester]`, semester);
+        formData.append(`departmentActivities[${index}][activity]`, activity);
+        formData.append(`departmentActivities[${index}][points]`, points);
+        formData.append(`departmentActivities[${index}][orderCopy]`, orderCopy);
+        
+        // Only append file data if a file is selected or there's an existing uploaded file
+        if (uploadedFile) {
+            formData.append(`departmentActivities[${index}][uploaded_file]`, uploadedFile.value);
+        }
+        if (fileInput && fileInput.files[0]) {
+            formData.append(`departmentActivities[${index}][file]`, fileInput.files[0]);
+        }
+    });
+    
+    // Collect and validate institute activities data
+    document.querySelectorAll('#instituteTable tr').forEach((row, index) => {
+        const srno = row.getAttribute('data-srno') || (index + 1);
+        const semester = row.querySelector('select').value;
+        const activity = row.querySelector('input[title="Enter Activity"]').value;
+        const points = row.querySelector('.points').value;
+        const orderCopy = row.querySelector('input[title="Enter Order Copy"]').value;
+        const fileInput = row.querySelector('input[type="file"]');
+        const uploadedFile = row.querySelector('input[name="uploaded_file"]');
+        
+        formData.append(`instituteActivities[${index}][srno]`, srno);
+        formData.append(`instituteActivities[${index}][semester]`, semester);
+        formData.append(`instituteActivities[${index}][activity]`, activity);
+        formData.append(`instituteActivities[${index}][points]`, points);
+        formData.append(`instituteActivities[${index}][orderCopy]`, orderCopy);
+        
+        // Only append file data if a file is selected or there's an existing uploaded file
+        if (uploadedFile) {
+            formData.append(`instituteActivities[${index}][uploaded_file]`, uploadedFile.value);
+        }
+        if (fileInput && fileInput.files[0]) {
+            formData.append(`instituteActivities[${index}][file]`, fileInput.files[0]);
+        }
+    });
+    
+    // Add form ID - CRITICAL PART
+    const formId = document.getElementById('formId').value;
+    console.log("FormID to be sent:", formId);
+    formData.append('formId', formId);
+    
+    console.log("Sending AJAX request to save form data");
+    
+    // Send data to server - use a simpler version first to test
     $.ajax({
-        url: '/save-form2-data', // Backend endpoint for saving form and files
+        url: '/save-form2-data',
         method: 'POST',
-        processData: false, // Prevent jQuery from processing data
-        contentType: false, // Prevent jQuery from setting content type
+        processData: false,
+        contentType: false,
         data: formData,
-        success: function (response) {
-            alert('Form data saved successfully!');
-            console.log('Server response:', response); // Debug: Log server response
+        beforeSend: function() {
+            console.log("AJAX request starting");
+            showError('Saving form data...', true);
         },
-        error: function (error) {
-            console.error('Error saving form data:', error);
-            console.log("Total file size before sending:", totalFileSize);
-            alert('There was an error saving the form data. Check console for details.');
-        }
-    });
-}
-
-
-        // Reset both forms
-        function resetAll() {
-            document.querySelectorAll(".form-control").forEach(function (input) {
-                input.value = '';
-            });
+        success: function(response) {
+            console.log("AJAX success:", response);
+            // Use standard JavaScript alert instead of modal
+            alert('Form data saved successfully!');
+            // Recalculate totals to make sure everything is up-to-date
             calculateTeachingTotal();
             calculateFeedbackTotal();
+        },
+        error: function(error) {
+            console.error('Error saving form data:', error);
+            let errorMessage = 'Error saving form data. Please try again.';
+            if (error.responseJSON && error.responseJSON.message) {
+                errorMessage = error.responseJSON.message;
+            }
+            showError(errorMessage);
         }
+    });
+}
+
+
+// Reset all form fields to initial state and remove all rows from both forms
+function resetAll() {
+    if (confirm('Are you sure you want to reset all fields?')) {
+        const formId = document.getElementById('formId').value; // Get form_id from a hidden field
+
+        // Send an API request to reset the form in the database
+        fetch('/reset-form2', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `formId=${encodeURIComponent(formId)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Clear and remove all rows for Department Activities form
+                const deptTableBody = document.getElementById('deptTable');
+                deptTableBody.innerHTML = ''; // Removes all rows from Department Activities table
+
+                // Clear and remove all rows for Institute Activities form
+                const instituteTableBody = document.getElementById('instituteTable');
+                instituteTableBody.innerHTML = ''; // Removes all rows from Institute Activities table
+
+                // Reset totals
+                document.getElementById('totaldeptPoints').innerText = '0';
+                document.getElementById('totalinstitutePoints').innerText = '0';
+
+                alert('Form reset successfully!');
+            } else {
+                alert('Failed to reset the form: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error resetting the form:', error);
+            alert('An error occurred while resetting the form.');
+        });
+    }
+}
+
 
         function goToNext() {
     let totalPoints = parseInt(document.getElementById('totaldeptPoints').innerText); // From Teaching Process
@@ -707,8 +932,104 @@ console.log('Final Department Activities:', formData.getAll('departmentActivitie
                 alert("No action to undo!");
             }
         }
+
+       
+
+// Calculate totals when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    calculateTeachingTotal();
+    calculateFeedbackTotal();
+});
+
+// Add the missing updateSerialNumbers function
+function updateSerialNumbers(tableId) {
+    const table = document.getElementById(tableId);
+    const rows = table.getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const srNoCell = rows[i].querySelector('.sr-no');
+        if (srNoCell) {
+            srNoCell.textContent = i + 1;
+            rows[i].setAttribute('data-srno', i + 1);
+        }
+    }
+}
+
+// Add a simple test save function to debug AJAX issues
+function testSave() {
+    console.log("Test save button clicked");
+    
+    var formData = new FormData();
+    formData.append('formId', $("#formId").val());
+    formData.append('testMode', 'true');
+    
+    $.ajax({
+        url: "/save-form2-data",
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            console.log("Test save success:", response);
+            alert('Form data saved successfully!');
+        },
+        error: function(xhr, status, error) {
+            console.error("Test save error:", xhr.responseText);
+            showError("Error saving data: " + xhr.responseText);
+        }
+    });
+}
+
+// Attach event listener directly to the save button when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Add debugging to the save button
+    const saveButton = document.querySelector('.btn-primary.mx-2');
+    if (saveButton) {
+        const originalOnClick = saveButton.onclick;
+        saveButton.onclick = function(e) {
+            console.log("Save button clicked manually");
+            try {
+                saveFormData();
+            } catch (error) {
+                console.error("Error in saveFormData:", error);
+                alert("Error saving form: " + error.message);
+                // Try simple save as fallback
+                testSave();
+            }
+        };
+    }
+});
+
+// Add the missing recalculate functions
+function recalculateTeachingRowNumbers() {
+    updateSerialNumbers('deptTable');
+}
+
+function recalculateInstituteRowNumbers() {
+    updateSerialNumbers('instituteTable');
+}
     
     </script>
+
+    <!-- Modal for success notification -->
+    <div class="modal fade" id="successModal" tabindex="-1" role="dialog" aria-labelledby="successModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="successModalLabel">Success</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p id="successMessage">Form data saved successfully!</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

@@ -14,27 +14,35 @@ import logging
 from flask_mail import Mail
 from itsdangerous import URLSafeTimedSerializer
 import json
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+import os
+import json
+from datetime import datetime
+import secrets
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
+# First create the Flask app
 app = Flask(__name__)
+app.secret_key = 'mayank'
+s = URLSafeTimedSerializer(app.config['SECRET_KEY'])  # Required for flashing messages
 
+# Configure upload folder
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
 
+# Set allowed file extensions
+ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx'}
 
-
-# Define your upload folder path
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['UPLOAD_FOLDER_UPLOADS'] = os.path.join(os.getcwd(), 'uploads')  # For storing uploads
+# Function to check if file has allowed extension
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Create the folder if it doesn't exist
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
-
-
-
-
-app = Flask(__name__)
-app.secret_key = 'mayank'
-s = URLSafeTimedSerializer(app.config['SECRET_KEY'])  # Required for flashing messages
 
 # Database connection details
 db_config = {
@@ -46,15 +54,13 @@ db_config = {
 }
 
 # Function to connect to the database using PyMySQL
-# Function to connect to the database using PyMySQL
 def connect_to_database():
     try:
         connection = pymysql.connect(
             host=db_config['host'],
             user=db_config['user'],
             password=db_config['password'],
-            database=db_config['database'],  # Ensure there's a comma here
-           
+            database=db_config['database']
         )
         print("Database connection successful!")
         return connection
@@ -624,393 +630,216 @@ def save_total_point():
 
 @app.route('/form2/<int:form_id>')
 def form2_page(form_id):
-    return render_template('form2.html', form_id=form_id)
+    connection = connect_to_database()
+    cursor = connection.cursor()
 
-# Upload parameters
-UPLOAD_FOLDER = r'C:\Users\mayank salvi\Desktop\appraisal system\uploads'
+    try:
+        # Query department_act table for department activities, ordered by srno
+        dept_sql = """
+            SELECT semester, activity, points, order_cpy, uploads 
+            FROM department_act 
+            WHERE form_id = %s
+                ORDER BY srno ASC
+        """
+        cursor.execute(dept_sql, (form_id,))
+        dept_activities_data = cursor.fetchall()
 
-ALLOWED_EXTENSIONS = {'pdf', 'docx'}
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+        # Query institute_act table for institute activities, ordered by srno
+        inst_sql = """
+            SELECT semester, activity, points, order_cpy, uploads 
+            FROM institute_act 
+            WHERE form_id = %s
+                ORDER BY srno ASC
+        """
+        cursor.execute(inst_sql, (form_id,))
+        institute_activities_data = cursor.fetchall()
 
-
-# Helper to check allowed file extensions
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-
-# Helper function to check allowed extensions
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-MAX_FILE_SIZE = 3 * 1024 * 1024  # 1 MB
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # Allow up to 100 MB
-
-
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part in the request'}), 400
-
-    files = request.files.getlist('file')  # Get all uploaded files
-    uploaded_files = []
-
-    for file in files:
-        if file.filename == '':
-            return jsonify({'error': 'No file selected for upload'}), 400
-
-        if not allowed_file(file.filename):
-            return jsonify({'error': f'Invalid file type for {file.filename}. Only PDF and DOCX are allowed.'}), 400
-
-        # Check the file size
-        if len(file.read()) > MAX_FILE_SIZE:
-            return jsonify({'error': f'File {file.filename} exceeds the 1 MB limit.'}), 400
-        file.seek(0)  # Reset file pointer after reading
-
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-        uploaded_files.append(filename)
-
-    return jsonify({'filenames': uploaded_files}), 200
-
+        return render_template('form2.html', 
+                           form_id=form_id, 
+                           dept_activities_data=dept_activities_data, 
+                           institute_activities_data=institute_activities_data)
+    except Exception as e:
+        print(f"Error loading form2 data: {e}")
+        return "Error loading form data", 500
+    finally:
+        cursor.close()
+        connection.close()
 
 @app.route('/save-form2-data', methods=['POST'])
 def save_form2_data():
-    print(f'Total request size: {sys.getsizeof(request.data)} bytes')
-    
-    form_id = request.form.get('formId')
-    conn = connect_to_database()
-    cursor = conn.cursor()
-
-    print("Received form ID:", form_id)  # Debug: Print received form ID
-
-    try:
-        # Process Department Activities
-        department_activities = []
-        for key, value in request.form.items():
-            if key.startswith('departmentActivities'):
-                index = int(key.split('[')[1].split(']')[0])  # Extract index from field name
-                while len(department_activities) <= index:
-                    department_activities.append({})
-                field_name = key.split(']')[1].strip('[').strip(']')
-                department_activities[index][field_name] = value
-
-        print("Department Activities:", department_activities)  # Debug: Print department activities
-
-        # Process Institute Activities
-        institute_activities = []
-        for key, value in request.form.items():
-            if key.startswith('instituteActivities'):
-                index = int(key.split('[')[1].split(']')[0])
-                while len(institute_activities) <= index:
-                    institute_activities.append({})
-                field_name = key.split(']')[1].strip('[').strip(']')
-                institute_activities[index][field_name] = value
-
-        print("Institute Activities:", institute_activities)  # Debug: Print institute activities
-
-        # Save Department Activities with file uploads
-        for i, activity in enumerate(department_activities):
-            semester = activity.get('semester')
-            activity_name = activity.get('activity')
-            points = activity.get('points')
-            order_copy = activity.get('orderCopy')
-            file = request.files.get(f'departmentActivities[{i}][file]')
-
-            print(f"Processing Department Activity {i}:", activity)  # Debug: Print each activity
-
-            # Handle file upload if it exists
-            if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file.save(filepath)  # Save file to the uploads directory
-                upload_path = filepath  # Store the full path in the database
-            else:
-                upload_path = None
-
-            # Insert into the database
-            cursor.execute(
-                "INSERT INTO department_act (form_id, semester, activity, points, order_cpy, uploads) "
-                "VALUES (%s, %s, %s, %s, %s, %s)",
-                (form_id, semester, activity_name, points, order_copy, upload_path)
-            )
-            print(f"Inserted into department_act: {form_id}, {semester}, {activity_name}, {points}, {order_copy}, {upload_path}")
-
-        # Save Institute Activities with file uploads
-        for i, activity in enumerate(institute_activities):
-            semester = activity.get('semester')
-            activity_name = activity.get('activity')
-            points = activity.get('points')
-            order_copy = activity.get('orderCopy')
-            file = request.files.get(f'instituteActivities[{i}][file]')
-
-            print(f"Processing Institute Activity {i}:", activity)  # Debug: Print each activity
-
-            # Handle file upload if it exists
-            if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file.save(filepath)
-                upload_path = filepath
-            else:
-                upload_path = None
-
-            # Insert into the database
-            cursor.execute(
-                "INSERT INTO institute_act (form_id, semester, activity, points, order_cpy, uploads) "
-                "VALUES (%s, %s, %s, %s, %s, %s)",
-                (form_id, semester, activity_name, points, order_copy, upload_path)
-            )
-            print(f"Inserted into institute_act: {form_id}, {semester}, {activity_name}, {points}, {order_copy}, {upload_path}")
-
-        # Commit the changes
-        conn.commit()
-        return jsonify({'message': 'Form2 data saved successfully!'}), 200
-
-    except Exception as e:
-        conn.rollback()
-        print(f"Error: {e}")  # Print the error for debugging
-        return jsonify({'message': 'Error saving Form2 data.'}), 500
-
-    finally:
-        cursor.close()
-        conn.close()
-
-
-@app.route('/save-2total-points', methods=['POST'])
-def save_2total_points():
-    connection = None
+    print(f"Request method: {request.method}")
+    print(f"Content type: {request.content_type}")
+    conn = None
     cursor = None
+    
     try:
-        data = request.get_json()
-        form_id = data.get('form_id')
-        total = data.get('total')
-        dept = data.get('dept')
-        institute = data.get('institute')
-
-        print(f"Received data: form_id={form_id}, total={total}, dept={dept}, institute={institute}")
-
-        if not form_id or total is None: 
-            return jsonify({"success": False, "message": "Invalid form ID or total points."}), 400
-
-        connection = connect_to_database()
-        cursor = connection.cursor()
-
-        sql = """
-                INSERT INTO form2_tot (form_id, total, dept, institute)
-                VALUES (%s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE total = VALUES(total), dept = VALUES(dept), institute = VALUES(institute)
-             """
-        print(f"SQL Executing: {sql} with values {(form_id, total, dept, institute)}")
-        cursor.execute(sql, (form_id, total, dept, institute))
-
-        connection.commit()
-        return jsonify({"success": True, "message": "Total points saved successfully."})
-
-    except Exception as e:
-        if connection: 
-            connection.rollback()
-        print(f"Error saving total points: {e}")
-        return jsonify({"success": False, "message": str(e)}), 500
-
-    finally:
-        if cursor:
-            cursor.close()
-        if connection:
-            connection.close()
-
-
-
-
-MAX_FILE_SIZE = 1 * 1024 * 1024  # 1MB limit
-
-
-app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
-
-
-app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
-
-# Utility to check allowed file extensions
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-
-# Route to handle form 3
-@app.route('/form3/<int:form_id>', methods=['GET', 'POST'])
-def form3_page(form_id):
-    if request.method == 'POST':
-        # Handle Self-Assessment Points
-        points = request.form.get('selfAssessment')
-
-        # File upload handling
-        category = request.form.get('category')
-        file = request.files.get('file')
-
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            if category == 'self-improvement':
-                file.save(os.path.join(app.config['UPLOAD_FOLDER_UPLOADS'], filename))
-                # Store in the database under doc1
-                conn = connect_to_database()
-                with conn.cursor() as cursor:
-                    cursor.execute(
-                        "INSERT INTO acr (form_id, doc1, points) VALUES (%s, %s, %s)",
-                        (form_id, filename, points)
-                    )
-                    conn.commit()
-                conn.close()
-                flash('Self-Improvement Initiatives file uploaded successfully.', 'success')
-            elif category == 'representing-college':
-                file.save(os.path.join(app.config['UPLOAD_FOLDER_UPLOADS'], filename))
-                # Store in the database under doc2
-                conn = connect_to_database()
-                with conn.cursor() as cursor:
-                    cursor.execute(
-                        "INSERT INTO acr (form_id, doc2, points) VALUES (%s, %s, %s)",
-                        (form_id, filename, points)
-                    )
-                    conn.commit()
-                conn.close()
-                flash('Representing College in External Environment file uploaded successfully.', 'success')
+        # Check for test mode - simple response for debugging
+        if request.form.get('testMode') == 'true':
+            print("Test mode detected, sending simple success response")
+            return jsonify({'success': True, 'message': 'Test save successful'})
+            
+        # Regular processing
+        if request.is_json:
+            print("JSON data received")
+            data = request.get_json()
+            form_id = data.get('formId')
         else:
-            flash('Invalid file or file type. Only PDF or DOCX files under 1MB are allowed.', 'danger')
-
-    return render_template('form3.html', form_id=form_id)
-
-
-@app.route('/save-form3-data', methods=['POST'])
-def save_form3_data():
-    conn = cursor = None
-    try:
-        print("==> Starting /save-form3-data request...")
-
-        # Debugging: Check request form and files data
-        print("Request form data:", request.form)
-        print("Request files:", request.files)
-
-        # Retrieve formId
-        form_id = request.form.get('formId')
-        if not form_id:
-            raise ValueError("Form ID is missing")
+            print("Form data received")
+            form_id = request.form.get('formId')
+            
         print(f"Form ID: {form_id}")
-
-        # Connect to the database
+        
+        if not form_id:
+            return jsonify({'error': 'Form ID is required'}), 400
+        
+        # Connect to database and start transaction
         conn = connect_to_database()
         cursor = conn.cursor()
-        print("==> Connected to the database")
-
-        # Process selfImprovementTable data
-        self_improvement_data = request.form.getlist('selfImprovement[]')
-        for entry in self_improvement_data:
-            data = eval(entry)
-            print(f"Inserting into self_imp: {data}")
-            cursor.execute(""" 
-                INSERT INTO self_imp (form_id, title, month, name_of_conf, issn, co_auth, link) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s) 
-            """, (form_id, data['title'], data['monthYear'], data['conference'], 
-                  data['isbn'], data['coAuthors'], data['link']))
-
-        # Process certificationTable data
-        certification_data = request.form.getlist('certification[]')
-        for entry in certification_data:
-            data = eval(entry)
-            print(f"Inserting into certifications: {data}")
-            if 'name' in data and data['name']:
-                file = request.files.get(f"certificationFile[]")
-                if file and allowed_file(file.filename):
-                    filename = secure_filename(file.filename)
-                    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                    file.save(filepath)
-                    print(f"File saved at: {filepath}")
-                    cursor.execute("""
-                        INSERT INTO certifications (form_id, name, uploads) 
-                        VALUES (%s, %s, %s) 
-                    """, (form_id, data['name'], filepath))
-
-        # Process titleTable data
-        title_data = request.form.getlist('title[]')
-        for entry in title_data:
-            data = eval(entry)
-            print(f"Inserting into copyright: {data}")
-            cursor.execute(""" 
-                INSERT INTO copyright (form_id, name, month, reg_no) 
-                VALUES (%s, %s, %s, %s) 
-            """, (form_id, data['name'], data['monthYear'], data['registration']))
-
-        # Process resourcePersonTable data
-        resource_data = request.form.getlist('resourcePerson[]')
-        for entry in resource_data:
-            data = eval(entry)
-            print(f"Inserting into resource_person: {data}")
-            if data:  # Only insert if data is not empty
-                cursor.execute("""
-                    INSERT INTO resource_person (form_id, name, dept, name_oi, num_op) 
-                    VALUES (%s, %s, %s, %s, %s) 
-                """, (form_id, data['topic'], data['department'], data['institute'], data['participants']))
-
-        # Process universityCommitteeTable data
-        committee_data = request.form.getlist('universityCommittee[]')
-        for entry in committee_data:
-            data = eval(entry)
-            print(f"Inserting into mem_uni: {data}")
-            if data:  # Only insert if data is not empty
-                cursor.execute("""
-                    INSERT INTO mem_uni (form_id, name, roles, designation) 
-                    VALUES (%s, %s, %s, %s) 
-                """, (form_id, data['committee'], data['responsibilities'], data['designation']))
-
-        # Process externalProjectsTable data
-            project_data = request.form.getlist('externalProjects[]')
-            for entry in project_data:
-                data = eval(entry)
-                print(f"Inserting into external_projects: {data}")
-                
-                if data:  # Only insert if data is not empty
-                    # Insert into external_projects with form_id included
-                    print(f"Inserting into external_projects: {data}")
-                    cursor.execute("""
-                        INSERT INTO external_projects (form_id, role, `desc`, contribution, university, duration, comments) 
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    """, (form_id, data['role'], data['description'], data['contribution'], 
-                        data['university'], data['duration'], data['comments']))
-
-
-
-        # Process contributionTable data
-        contribution_data = request.form.getlist('contribution[]')
-        for entry in contribution_data:
-            data = eval(entry)
-            print(f"Inserting into contribution_to_society: {data}")
-            if data:  # Only insert if data is not empty
-                file = request.files.get(f"contributionFile[]")
-                if file and allowed_file(file.filename):
-                    filename = secure_filename(file.filename)
-                    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                    file.save(filepath)
-                    print(f"File saved at: {filepath}")
-                    cursor.execute("""
-                        INSERT INTO contribution_to_society (form_id, semester, activity, points, order_cpy, uploads) 
-                        VALUES (%s, %s, %s, %s, %s, %s) 
-                    """, (form_id, data['semester'], data['activity'], data['points'], 
-                          data['orderCopy'], filepath))
-
-        # Commit the transaction
+        
+        # Start transaction
+        cursor.execute("START TRANSACTION")
+        
+        # First, delete all existing records for this form_id
+        # This ensures removed rows are actually deleted from the database
+        cursor.execute("DELETE FROM department_act WHERE form_id = %s", (form_id,))
+        cursor.execute("DELETE FROM institute_act WHERE form_id = %s", (form_id,))
+        print("Cleared existing records for form_id:", form_id)
+        
+        # Process department activities
+        department_activities = []
+        dept_points_total = 0
+        
+        # Process form data
+        for key, value in request.form.items():
+            if key.startswith('departmentActivities'):
+                parts = key.split('[')
+                if len(parts) >= 2:
+                    index_str = parts[1].split(']')[0]
+                    try:
+                        index = int(index_str)
+                        while len(department_activities) <= index:
+                            department_activities.append({})
+                        
+                        field_name = parts[2].strip('[').strip(']')
+                        department_activities[index][field_name] = value
+                        
+                        if field_name == 'points':
+                            dept_points_total += float(value)
+                    except Exception as e:
+                        print(f"Error parsing key {key}: {e}")
+        
+        # Validate department points
+        if dept_points_total > 20:
+            raise ValueError("Department activities total points cannot exceed 20")
+            
+        # Insert department activities
+        for i, activity in enumerate(department_activities):
+            if not activity:  # Skip empty activities
+                continue
+            
+            # Get necessary fields
+            semester = activity.get('semester', '')
+            act_name = activity.get('activity', '')
+            points = activity.get('points', 0)
+            order_copy = activity.get('orderCopy', '')
+            upload_path = None
+            
+            # Handle file upload if needed
+            file_key = f'departmentActivities[{i}][file]'
+            if file_key in request.files:
+                file = request.files[file_key]
+                if file and file.filename:
+                    if allowed_file(file.filename):
+                        filename = secure_filename(file.filename)
+                        upload_path = f'uploads/{filename}'
+                        file_path = os.path.join('static', upload_path)
+                        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                        file.save(file_path)
+            
+            # Insert into database
+            cursor.execute("""
+                INSERT INTO department_act 
+                (form_id, srno, semester, activity, points, order_cpy, uploads)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (form_id, i+1, semester, act_name, points, order_copy, upload_path))
+        
+        # Process institute activities (similar logic)
+        institute_activities = []
+        institute_points_total = 0
+        
+        for key, value in request.form.items():
+            if key.startswith('instituteActivities'):
+                parts = key.split('[')
+                if len(parts) >= 2:
+                    index_str = parts[1].split(']')[0]
+                    try:
+                        index = int(index_str)
+                        while len(institute_activities) <= index:
+                            institute_activities.append({})
+                        
+                        field_name = parts[2].strip('[').strip(']')
+                        institute_activities[index][field_name] = value
+                        
+                        if field_name == 'points':
+                            institute_points_total += float(value)
+                    except Exception as e:
+                        print(f"Error parsing key {key}: {e}")
+        
+        # Validate institute points
+        if institute_points_total > 10:
+            raise ValueError("Institute activities total points cannot exceed 10")
+            
+        # Insert institute activities
+        for i, activity in enumerate(institute_activities):
+            if not activity:  # Skip empty activities
+                continue
+            
+            # Get necessary fields
+            semester = activity.get('semester', '')
+            act_name = activity.get('activity', '')
+            points = activity.get('points', 0)
+            order_copy = activity.get('orderCopy', '')
+            upload_path = None
+            
+            # Handle file upload if needed
+            file_key = f'instituteActivities[{i}][file]'
+            if file_key in request.files:
+                file = request.files[file_key]
+                if file and file.filename:
+                    if allowed_file(file.filename):
+                        filename = secure_filename(file.filename)
+                        upload_path = f'uploads/{filename}'
+                        file_path = os.path.join('static', upload_path)
+                        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                        file.save(file_path)
+            
+            # Insert into database
+            cursor.execute("""
+                INSERT INTO institute_act 
+                (form_id, srno, semester, activity, points, order_cpy, uploads)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (form_id, i+1, semester, act_name, points, order_copy, upload_path))
+        
+        # Commit changes
         conn.commit()
-        return jsonify(status='success', message='Data saved successfully')
-
-    except Exception as e:
-        print(f"Error: {e}")
+        print("Form data saved successfully")
+        return jsonify({'success': True, 'message': 'Form data saved successfully'})
+        
+    except ValueError as ve:
         if conn:
-            conn.rollback()  # Rollback in case of error
-        return jsonify(status='error', message=str(e))
-
+            conn.rollback()
+        print(f"Validation error: {str(ve)}")
+        return jsonify({'error': str(ve)}), 400
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        print(f"Error processing request: {str(e)}")
+        return jsonify({'error': str(e)}), 500
     finally:
         if cursor:
             cursor.close()
         if conn:
             conn.close()
-
-
 
 @app.route('/save-3total-points', methods=['POST'])
 def save_3total_points():
@@ -1369,7 +1198,8 @@ def render_pastforms():
                 return redirect(url_for('landing'))  # Redirect to another route, e.g., home or dashboard
             
             # If there are entries, render the pastforms.html page with the teaching_data
-            return render_template('pastforms.html', teaching_data=[], selected_year=None)
+            return render_template('pastforms.html', teaching_data=[], selected_year=None, 
+                                  user_data=None, form_id=None)
     
     finally:
         connection.close()
@@ -1388,6 +1218,8 @@ def search_pastforms():
     committee_data, project_data, contribution_data = [], [], []
     points_data = {}  # Store points for criteria
     acr_data = {}     # Store ACR data (if needed)
+    form_id = None    # Initialize form_id
+    user_data = None  # Initialize user_data
 
     try:
         with connection.cursor() as cursor:
@@ -1398,6 +1230,26 @@ def search_pastforms():
 
             if result:
                 form_id = result[0]
+                sql_user_acad = """
+                SELECT user_id, acad_years FROM acad_years WHERE form_id = %s
+                """
+                cursor.execute(sql_user_acad, (form_id,))
+                user_acad_result = cursor.fetchone()
+
+                if user_acad_result:
+                    user_id, selected_year = user_acad_result  # Unpack the result
+                else:
+                    flash('No data found for the provided form ID.', 'warning')
+                    return redirect(url_for('review', form_id=form_id))  # Pass form_id
+
+                # Fetch user details from the users table, including name and dept
+                sql_user = """
+                SELECT userid, gmail, dept, name, designation, d_o_j, dob, edu_q, exp
+                FROM users
+                WHERE userid = %s
+                """
+                cursor.execute(sql_user, (user_id,))
+                user_data = cursor.fetchone()
 
                 # Fetch teaching process data
                 sql = """
@@ -1515,7 +1367,9 @@ def search_pastforms():
         committee_data=committee_data,
         project_data=project_data,
         contribution_data=contribution_data,
-        selected_year=selected_year
+        selected_year=selected_year,
+        user_data=user_data,
+        form_id=form_id
     )
 
 
@@ -1524,11 +1378,11 @@ def search_pastforms():
 def uploaded_file(filename):
     # Ensure the filename is safe and exists in the upload directory
     safe_filename = os.path.basename(filename)  # Prevent directory traversal attacks
-    file_path = os.path.join(UPLOAD_FOLDER, safe_filename)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename)
 
     try:
         if os.path.exists(file_path):
-            return send_from_directory(UPLOAD_FOLDER, safe_filename, as_attachment=False)
+            return send_from_directory(app.config['UPLOAD_FOLDER'], safe_filename, as_attachment=False)
         else:
             abort(404, description="File not found")
     except Exception as e:
@@ -1537,7 +1391,7 @@ def uploaded_file(filename):
 
 @app.route('/uploads/<filename>')
 def download_file(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @app.route('/highlanding')
 def highlanding():
@@ -2362,7 +2216,649 @@ def send_appraisal_email(user_email):
 def aboutus():
     return render_template('aboutus.html')
 
+@app.route('/delete-institute-row', methods=['POST'])
+def delete_institute_row():
+    try:
+        data = request.get_json()
+        form_id = data.get('form_id')
+        srno = data.get('srno')
+        
+        if not form_id or srno is None:
+            return jsonify({'success': False, 'message': 'Missing form_id or srno'}), 400
+            
+        conn = connect_to_database()
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute("DELETE FROM institute_act WHERE form_id = %s AND srno = %s", (form_id, srno))
+            conn.commit()
+            return jsonify({'success': True, 'message': 'Row deleted successfully'})
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'message': str(e)}), 500
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
+@app.route('/delete-dept-row', methods=['POST'])
+def delete_dept_row():
+    try:
+        data = request.get_json()
+        form_id = data.get('form_id')
+        srno = data.get('srno')
+        
+        if not form_id or srno is None:
+            return jsonify({'success': False, 'message': 'Missing form_id or srno'}), 400
+            
+        conn = connect_to_database()
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute("DELETE FROM department_act WHERE form_id = %s AND srno = %s", (form_id, srno))
+            conn.commit()
+            return jsonify({'success': True, 'message': 'Row deleted successfully'})
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'message': str(e)}), 500
+        finally:
+            cursor.close()
+            conn.close()
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/save-2total-points', methods=['POST'])
+def save_2total_points():
+    connection = None
+    cursor = None
+    try:
+        data = request.get_json()
+        form_id = data.get('form_id')
+        total = data.get('total')
+        dept = data.get('dept')
+        institute = data.get('institute')
+
+        print(f"Received form2 total points data: form_id={form_id}, total={total}, dept={dept}, institute={institute}")
+
+        if not form_id or total is None: 
+            return jsonify({"success": False, "message": "Invalid form ID or total points."}), 400
+
+        connection = connect_to_database()
+        cursor = connection.cursor()
+
+        sql = """
+                INSERT INTO form2_tot (form_id, total, dept, institute)
+                VALUES (%s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE total = VALUES(total), dept = VALUES(dept), institute = VALUES(institute)
+             """
+        print(f"SQL Executing: {sql} with values {(form_id, total, dept, institute)}")
+        cursor.execute(sql, (form_id, total, dept, institute))
+
+        connection.commit()
+        return jsonify({"success": True, "message": "Form2 total points saved successfully."})
+
+    except Exception as e:
+        if connection: 
+            connection.rollback()
+        print(f"Error saving form2 total points: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+
+@app.route('/form3/<int:form_id>')
+def form3_page(form_id):
+    """
+    Render the form3 page with data for the specified form ID.
+    This form handles self-improvement activities and institutional contributions.
+    """
+    try:
+        print(f"Loading form3 data for form_id: {form_id} (type: {type(form_id)})")
+        
+        # Convert form_id to string as all table columns are VARCHAR(45)
+        form_id_str = str(form_id)
+        print(f"Using form_id_str: {form_id_str} for database queries")
+        
+        # Get existing form3 data if available
+        conn = connect_to_database()
+        cursor = conn.cursor()
+        
+        # Helper function to handle NULL values in returned data
+        def safe_get(row, index, default=''):
+            if index >= len(row) or row[index] is None:
+                return default
+            return row[index]
+        
+        # Function to process row data with NULL handling
+        def process_rows(rows):
+            if not rows:
+                return []
+            
+            processed = []
+            for row in rows:
+                # Convert None values to empty strings
+                processed_row = tuple('' if val is None else val for val in row)
+                processed.append(processed_row)
+            
+            return processed
+            
+        # Query for self-improvement data
+        cursor.execute("SELECT * FROM self_imp WHERE form_id = %s", (form_id_str,))
+        self_improvement_data = process_rows(cursor.fetchall())
+        print(f"Self improvement data: {len(self_improvement_data)} records found")
+        
+        # Query for certification data
+        cursor.execute("SELECT * FROM certifications WHERE form_id = %s", (form_id_str,))
+        certification_data = process_rows(cursor.fetchall())
+        print(f"Certification data: {len(certification_data)} records found")
+        
+        # Query for copyright/patent data
+        cursor.execute("SELECT * FROM copyright WHERE form_id = %s", (form_id_str,))
+        copyright_data = process_rows(cursor.fetchall())
+        print(f"Copyright data: {len(copyright_data)} records found")
+        
+        # Query for resource person data
+        cursor.execute("SELECT * FROM resource_person WHERE form_id = %s", (form_id_str,))
+        resource_data = process_rows(cursor.fetchall())
+        print(f"Resource person data: {len(resource_data)} records found")
+        
+        # Query for university committee data
+        cursor.execute("SELECT * FROM mem_uni WHERE form_id = %s", (form_id_str,))
+        committee_data = process_rows(cursor.fetchall())
+        print(f"University committee data: {len(committee_data)} records found")
+        
+        # Query for external projects data
+        cursor.execute("SELECT * FROM external_projects WHERE form_id = %s", (form_id_str,))
+        project_data = process_rows(cursor.fetchall())
+        print(f"External projects data: {len(project_data)} records found")
+        
+        # Query for contribution to society data
+        cursor.execute("SELECT * FROM contribution_to_society WHERE form_id = %s", (form_id_str,))
+        contribution_data = process_rows(cursor.fetchall())
+        print(f"Contribution to society data: {len(contribution_data)} records found")
+        
+        # Fetch self-assessment marks if available
+        try:
+            cursor.execute("SELECT self_assessment_marks FROM form3_assessment WHERE form_id = %s", (form_id_str,))
+            assessment_result = cursor.fetchone()
+            self_assessment_marks = safe_get(assessment_result, 0, '') if assessment_result else ''
+            print(f"Self assessment marks: {self_assessment_marks}")
+        except Exception as e:
+            print(f"Error fetching self assessment marks: {e}")
+            self_assessment_marks = ''
+        
+        cursor.close()
+        conn.close()
+        
+        # Print sample data for verification
+        if self_improvement_data:
+            print(f"Sample self improvement data: {self_improvement_data[0]}")
+        if contribution_data:
+            print(f"Sample contribution data: {contribution_data[0]}")
+            
+        return render_template('form3.html', 
+                               form_id=form_id,
+                               self_improvement_data=self_improvement_data,
+                               certification_data=certification_data,
+                               copyright_data=copyright_data,
+                               resource_data=resource_data,
+                               committee_data=committee_data,
+                               project_data=project_data,
+                               contribution_data=contribution_data,
+                               self_assessment_marks=self_assessment_marks)
+                               
+    except Exception as e:
+        print(f"Error loading form3 data: {e}")
+        import traceback
+        traceback.print_exc()
+        # If there's an error, still render the template but with empty data
+        return render_template('form3.html', form_id=form_id)
+
+@app.route('/save-form3-data', methods=['POST'])
+def save_form3_data():
+    """
+    Handle form3 data submission and save to database
+    """
+    conn = None
+    cursor = None
+    
+    try:
+        form_id = request.form.get('formId')
+        if not form_id:
+            return jsonify({'status': 'error', 'message': 'Form ID is required'}), 400
+            
+        # Convert form_id to string explicitly to ensure consistent type
+        form_id = str(form_id)
+        print(f"Processing form3 data for form_id: {form_id} (type: {type(form_id)})")
+        print(f"Form data keys: {list(request.form.keys())}")
+        
+        # Connect to database
+        conn = connect_to_database()
+        cursor = conn.cursor()
+        
+        # Start transaction
+        cursor.execute("START TRANSACTION")
+        
+        # Ensure form3_assessment table exists
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS form3_assessment (
+                form_id VARCHAR(45) PRIMARY KEY,
+                self_assessment_marks VARCHAR(45) DEFAULT '0'
+            )
+        """)
+        
+        # Process Self Improvement Data
+        self_improvement_entries = []
+        
+        # Process indexed form elements for self-improvement
+        for key in request.form.keys():
+            if key.startswith('selfImprovement[') and key.endswith(']'):
+                try:
+                    entry = json.loads(request.form.get(key))
+                    self_improvement_entries.append(entry)
+                    print(f"Processed self-improvement entry from key: {key}")
+                except json.JSONDecodeError as e:
+                    print(f"Error parsing selfImprovement entry: {e}")
+        
+        if self_improvement_entries:
+            # Clear existing data
+            cursor.execute("DELETE FROM self_imp WHERE form_id = %s", (form_id,))
+            
+            for item in self_improvement_entries:
+                cursor.execute("""
+                    INSERT INTO self_imp (form_id, title, month, name_of_conf, issn, co_auth, link)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    form_id,
+                    item.get('title', ''),
+                    item.get('monthYear', ''),
+                    item.get('conference', ''),
+                    item.get('isbn', ''),
+                    item.get('coAuthors', ''),
+                    item.get('link', '')
+                ))
+                print(f"Inserted self_imp record: {item}")
+        
+        # Process Certification Data
+        certification_entries = []
+        certification_files = []
+        
+        # Collect all certification data
+        for key in request.form.keys():
+            if key.startswith('certification[') and key.endswith(']'):
+                try:
+                    entry = json.loads(request.form.get(key))
+                    index = key[14:-1]  # Extract index from certification[INDEX]
+                    certification_entries.append((index, entry))
+                    print(f"Processed certification entry from key: {key}, index: {index}")
+                except json.JSONDecodeError as e:
+                    print(f"Error parsing certification entry: {e}")
+        
+        # Sort entries by index
+        certification_entries.sort(key=lambda x: x[0])
+        
+        # Process certification files
+        for key in request.files.keys():
+            if key.startswith('certificationFile[') and key.endswith(']'):
+                index = key[18:-1]  # Extract index from certificationFile[INDEX]
+                certification_files.append((index, request.files[key]))
+                print(f"Processed certification file from key: {key}, index: {index}")
+        
+        if certification_entries:
+            # Clear existing data
+            cursor.execute("DELETE FROM certifications WHERE form_id = %s", (form_id,))
+            
+            for index, item in certification_entries:
+                # Process file if available
+                upload_path = None
+                for file_index, file in certification_files:
+                    if file_index == index and file and file.filename:
+                        if allowed_file(file.filename):
+                            filename = secure_filename(file.filename)
+                            upload_path = os.path.join('uploads', filename)
+                            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                            print(f"Saved certification file: {filename} for index {index}")
+                
+                cursor.execute("""
+                    INSERT INTO certifications (form_id, name, uploads)
+                    VALUES (%s, %s, %s)
+                """, (
+                    form_id,
+                    item.get('name', ''),
+                    upload_path
+                ))
+                print(f"Inserted certification record: {item}")
+        
+        # Process Copyright/Patent Data
+        title_entries = []
+        for key in request.form.keys():
+            if key.startswith('title[') and key.endswith(']'):
+                try:
+                    entry = json.loads(request.form.get(key))
+                    title_entries.append(entry)
+                    print(f"Processed copyright entry from key: {key}")
+                except json.JSONDecodeError as e:
+                    print(f"Error parsing title entry: {e}")
+        
+        if title_entries:
+            # Clear existing data
+            cursor.execute("DELETE FROM copyright WHERE form_id = %s", (form_id,))
+            
+            for item in title_entries:
+                cursor.execute("""
+                    INSERT INTO copyright (form_id, name, month, reg_no)
+                    VALUES (%s, %s, %s, %s)
+                """, (
+                    form_id,
+                    item.get('name', ''),
+                    item.get('monthYear', ''),
+                    item.get('registration', '')
+                ))
+                print(f"Inserted copyright record: {item}")
+        
+        # Process Resource Person Data
+        resource_entries = []
+        for key in request.form.keys():
+            if key.startswith('resourcePerson[') and key.endswith(']'):
+                try:
+                    entry = json.loads(request.form.get(key))
+                    resource_entries.append(entry)
+                    print(f"Processed resource person entry from key: {key}")
+                except json.JSONDecodeError as e:
+                    print(f"Error parsing resourcePerson entry: {e}")
+        
+        if resource_entries:
+            # Clear existing data
+            cursor.execute("DELETE FROM resource_person WHERE form_id = %s", (form_id,))
+            
+            for item in resource_entries:
+                cursor.execute("""
+                    INSERT INTO resource_person (form_id, name, dept, name_oi, num_op)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (
+                    form_id,
+                    item.get('topic', ''),
+                    item.get('department', ''),
+                    item.get('institute', ''),
+                    item.get('participants', 0)
+                ))
+                print(f"Inserted resource_person record: {item}")
+        
+        # Process University Committee Data
+        committee_entries = []
+        for key in request.form.keys():
+            if key.startswith('universityCommittee[') and key.endswith(']'):
+                try:
+                    entry = json.loads(request.form.get(key))
+                    committee_entries.append(entry)
+                    print(f"Processed committee entry from key: {key}")
+                except json.JSONDecodeError as e:
+                    print(f"Error parsing universityCommittee entry: {e}")
+        
+        if committee_entries:
+            # Clear existing data
+            cursor.execute("DELETE FROM mem_uni WHERE form_id = %s", (form_id,))
+            
+            for item in committee_entries:
+                cursor.execute("""
+                    INSERT INTO mem_uni (form_id, name, roles, designation)
+                    VALUES (%s, %s, %s, %s)
+                """, (
+                    form_id,
+                    item.get('committee', ''),
+                    item.get('responsibilities', ''),
+                    item.get('designation', '')
+                ))
+                print(f"Inserted mem_uni record: {item}")
+        
+        # Process External Projects Data
+        project_entries = []
+        for key in request.form.keys():
+            if key.startswith('externalProjects[') and key.endswith(']'):
+                try:
+                    entry = json.loads(request.form.get(key))
+                    project_entries.append(entry)
+                    print(f"Processed project entry from key: {key}")
+                except json.JSONDecodeError as e:
+                    print(f"Error parsing externalProjects entry: {e}")
+        
+        if project_entries:
+            # Clear existing data
+            cursor.execute("DELETE FROM external_projects WHERE form_id = %s", (form_id,))
+            
+            for item in project_entries:
+                cursor.execute("""
+                    INSERT INTO external_projects (form_id, role, `desc`, contribution, university, duration, comments)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    form_id,
+                    item.get('role', ''),
+                    item.get('description', ''),
+                    item.get('contribution', ''),
+                    item.get('university', ''),
+                    item.get('duration', ''),
+                    item.get('comments', '')
+                ))
+                print(f"Inserted external_projects record: {item}")
+        
+        # Process Contribution to Society Data
+        contribution_entries = []
+        contribution_files = []
+        
+        # Collect all contribution data
+        for key in request.form.keys():
+            if key.startswith('contribution[') and key.endswith(']'):
+                try:
+                    entry = json.loads(request.form.get(key))
+                    index = key[13:-1]  # Extract index from contribution[INDEX]
+                    contribution_entries.append((index, entry))
+                    print(f"Processed contribution entry from key: {key}, index: {index}")
+                except json.JSONDecodeError as e:
+                    print(f"Error parsing contribution entry: {e}")
+        
+        # Sort entries by index
+        contribution_entries.sort(key=lambda x: x[0])
+
+        # Process contribution files
+        for key in request.files.keys():
+            if key.startswith('contributionFile[') and key.endswith(']'):
+                index = key[17:-1]  # Extract index from contributionFile[INDEX]
+                contribution_files.append((index, request.files[key]))
+                print(f"Processed contribution file from key: {key}, index: {index}")
+        
+        if contribution_entries:
+            # Clear existing data
+            cursor.execute("DELETE FROM contribution_to_society WHERE form_id = %s", (form_id,))
+            
+            for index, item in contribution_entries:
+                # Process file if available
+                upload_path = None
+                for file_index, file in contribution_files:
+                    if file_index == index and file and file.filename:
+                        if allowed_file(file.filename):
+                            filename = secure_filename(file.filename)
+                            upload_path = os.path.join('uploads', filename)
+                            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                            print(f"Saved contribution file: {filename} for index {index}")
+                
+                cursor.execute("""
+                    INSERT INTO contribution_to_society (form_id, semester, activity, points, order_cpy, uploads)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, (
+                    form_id,
+                    item.get('semester', ''),
+                    item.get('activity', ''),
+                    item.get('points', 0),
+                    item.get('orderCopy', ''),
+                    upload_path
+                ))
+                print(f"Inserted contribution_to_society record: {item}")
+        
+        # Save self-assessment marks
+        self_assessment_marks = request.form.get('selfAssessmentMarks', '0')
+        print(f"Self-assessment marks: {self_assessment_marks}")
+        
+        # Save to form3_assessment table
+        cursor.execute("""
+            INSERT INTO form3_assessment (form_id, self_assessment_marks) 
+            VALUES (%s, %s) 
+            ON DUPLICATE KEY UPDATE self_assessment_marks = %s
+        """, (
+            form_id, 
+            self_assessment_marks,
+            self_assessment_marks
+        ))
+        
+        # Commit all changes
+        conn.commit()
+        print("Form3 data saved successfully!")
+        
+        return jsonify({'status': 'success', 'message': 'Form 3 data saved successfully'})
+        
+    except Exception as e:
+        # Rollback in case of error
+        if conn:
+            conn.rollback()
+        print(f"Error saving form3 data: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+
+@app.route('/reset-form2', methods=['POST'])
+def reset_form2():
+    """
+    Reset form2 data by removing all entries for the given form_id
+    from department_act and institute_act tables.
+    """
+    try:
+        form_id = request.form.get('formId')
+        
+        if not form_id:
+            return jsonify({"status": "error", "message": "Form ID is required"}), 400
+            
+        # Connect to the database
+        conn = connect_to_database()
+        cursor = conn.cursor()
+        
+        try:
+            # Start transaction to ensure data consistency
+            cursor.execute("START TRANSACTION")
+            
+            # Delete all department activities for this form
+            cursor.execute("DELETE FROM department_act WHERE form_id = %s", (form_id,))
+            
+            # Delete all institute activities for this form
+            cursor.execute("DELETE FROM institute_act WHERE form_id = %s", (form_id,))
+            
+            # Also reset the total points
+            cursor.execute("DELETE FROM form2_tot WHERE form_id = %s", (form_id,))
+            
+            # Commit changes
+            conn.commit()
+            
+            print(f"Successfully reset form2 data for form_id: {form_id}")
+            return jsonify({"status": "success", "message": "Form data has been reset"})
+            
+        except Exception as e:
+            # Rollback in case of error
+            conn.rollback()
+            print(f"Error resetting form2 data: {str(e)}")
+            return jsonify({"status": "error", "message": str(e)}), 500
+            
+        finally:
+            # Close cursor and connection
+            cursor.close()
+            conn.close()
+            
+    except Exception as e:
+        print(f"Unexpected error in reset_form2: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/pastform/<int:form_id>')
+def pastform(form_id):
+    try:
+        # Connect to database
+        conn = connect_to_database()
+        cursor = conn.cursor()
+        
+        # Get form details
+        cursor.execute("SELECT academic_year FROM forms WHERE id = %s", (form_id,))
+        form_info = cursor.fetchone()
+        selected_year = form_info[0] if form_info else "Unknown"
+        
+        # Get user data associated with this form
+        cursor.execute("""
+            SELECT u.id, u.email, u.department, u.name, u.designation, 
+                   u.date_of_joining, u.date_of_birth, u.qualification, u.experience
+            FROM users u
+            JOIN forms f ON u.id = f.user_id
+            WHERE f.id = %s
+        """, (form_id,))
+        user_data = cursor.fetchone()
+        
+        # Fetch Form 1 data
+        cursor.execute("SELECT semester, subject, subject_code, class, type, no_of_students, pass_percentage, feedback FROM teaching_process WHERE form_id = %s ORDER BY srno ASC", (form_id,))
+        form1_data = cursor.fetchall()
+        
+        # Fetch Form 2 - Department Activities
+        cursor.execute("SELECT semester, activity, points, order_cpy FROM department_act WHERE form_id = %s ORDER BY srno ASC", (form_id,))
+        form2_dept_data = cursor.fetchall()
+        
+        # Fetch Form 2 - Institute Activities
+        cursor.execute("SELECT semester, activity, points, order_cpy FROM institute_act WHERE form_id = %s ORDER BY srno ASC", (form_id,))
+        form2_inst_data = cursor.fetchall()
+        
+        # Fetch Form 3 data - you can add specific queries here
+        # cursor.execute(...
+        # form3_data = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return render_template('pastform.html', 
+                               user_data=user_data, 
+                               form_id=form_id, 
+                               selected_year=selected_year,
+                               form1_data=form1_data,
+                               form2_dept_data=form2_dept_data,
+                               form2_inst_data=form2_inst_data)
+    except Exception as e:
+        print(f"Error fetching past form data: {e}")
+        return render_template('pastform.html', 
+                               user_data=None, 
+                               form_id=form_id,
+                               selected_year=None,
+                               error=str(e))
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part in the request'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    if not allowed_file(file.filename):
+        return jsonify({'error': f'Invalid file type. Allowed types are: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
+
+    try:
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        return jsonify({'filename': filename}), 200
+    except Exception as e:
+        print(f"Error saving file: {e}")
+        return jsonify({'error': 'Error saving file'}), 500
 
 if __name__ == '__main__':
     # Run the app on port 5000
